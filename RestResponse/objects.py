@@ -71,7 +71,7 @@ class NoneProp(object):
 class RestList(list):
     def __init__(self, data):
         if not isinstance(data, list):
-            raise ValueError('RestList must be list object')
+            raise ValueError('RestList data must be list object')
 
         for item in data:
             self.append(item)
@@ -83,12 +83,14 @@ class RestList(list):
         return json.dumps([x.__repr_data__ if hasattr(x, '__repr_data__') else x for x in self])
 
     def append(self, item):
-        if isinstance(item, dict):
-            super(RestList, self).append(RestObject(item))
-        elif isinstance(item, list):
-            super(RestList, self).append(RestList(item))
-        else:
-            super(RestList, self).append(item)
+        super(RestList, self).append(RestResponse.parse(item))
+
+    def extend(self, items):
+        for item in items:
+            self.append(item)
+
+    def insert(self, index, item):
+        super(RestList, self).insert(index, RestResponse.parse(item))
 
 
 class RestObject(dict):
