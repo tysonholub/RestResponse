@@ -101,4 +101,4 @@ intended to be a safe, welcoming space for collaboration, and contributors are e
 
 ## License
 
-The gem is available as open source under the terms of the [MIT License](http://opensource.org/licenses/MIT).
+This package is available as open source under the terms of the [MIT License](http://opensource.org/licenses/MIT).

@@ -1,6 +1,4 @@
-__version__ = '0.1'
-
-from objects import RestEncoder, RestResponse, RestObject, RestList, NoneProp
+from .objects import RestEncoder, RestResponse, RestObject, RestList, NoneProp
 
 parse = RestResponse.parse
 

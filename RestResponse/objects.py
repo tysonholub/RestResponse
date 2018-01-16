@@ -1,5 +1,8 @@
+from __future__ import division, absolute_import, print_function, unicode_literals
+
 import json
 import simplejson
+import six
 
 
 class RestEncoder(json.JSONEncoder):
@@ -94,7 +97,7 @@ class RestObject(dict):
             raise ValueError('RestObject data must be dict object')
         self.__data__ = {}
         self.__repr_data__ = data
-        for k, v in data.iteritems():
+        for k, v in six.iteritems(data):
             self.__data__[k] = self._init_data(v)
 
     def __repr__(self):
@@ -142,13 +145,13 @@ class RestObject(dict):
         return self.__repr_data__.get(key, default)
 
     def has_key(self, key):
-        return self.__repr_data__.has_key(key)
+        return self.__repr_data__.has_key(key) # NOQA
 
     def items(self):
         return self.__repr_data__.items()
 
     def iteritems(self):
-        return self.__repr_data__.iteritems()
+        return six.iteritems(self.__repr_data__)
 
     def iterkeys(self):
         return self.__repr_data__.iterkeys()
@@ -178,7 +181,7 @@ class RestObject(dict):
 
     def _update_object(self, data):
         self.__repr_data__.update(data)
-        for k, v in data.iteritems():
+        for k, v in six.iteritems(data):
             self.__data__[k] = self._init_data(v)
 
 
