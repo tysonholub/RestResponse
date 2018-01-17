@@ -16,6 +16,8 @@ class RestEncoder(json.JSONEncoder):
             elif isinstance(v, list):
                 result[k] = self._recurse_list(v)
             else:
+                if isinstance(v, NoneProp):
+                    v = None
                 result[k] = v
 
         return result
@@ -30,6 +32,8 @@ class RestEncoder(json.JSONEncoder):
             elif isinstance(item, dict):
                 result.append(self._walk_dict(item))
             else:
+                if isinstance(item, NoneProp):
+                    item = None
                 result.append(item)
 
         return result
@@ -41,6 +45,8 @@ class RestEncoder(json.JSONEncoder):
             obj = self._recurse_list(obj)
         elif isinstance(obj, dict):
             obj = self._walk_dict(obj)
+        elif isinstance(obj, NoneProp):
+            obj = None
 
         return super(RestEncoder, self).encode(obj)
 
