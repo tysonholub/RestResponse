@@ -91,6 +91,29 @@ Rest Response
     }
 }
 ```
+### NoneProp
+It should be noted that missing referenced properties, including nested, are gracefully falsey.
+
+```python
+>>> import RestResponse
+>>> data = RestResponse.parse({})
+>>> data.property.is_none
+None
+>>> bool(data.property.is_none)
+False
+>>> isinstance(data.property.is_none, RestResponse.NoneProp)
+True
+>>> data.property.is_none = None
+>>> isinstance(data.property.is_none, RestResponse.NoneProp)
+False
+>>> print data.pretty_print()
+{
+    "property": {
+        "is_none": null
+    }
+}
+```
+
 
 ## Contributing
 

@@ -6,11 +6,43 @@ import six
 
 
 class RestEncoder(json.JSONEncoder):
+    def _walk_dict(self, obj):
+        result = {}
+        for k, v in six.iteritems(obj):
+            if isinstance(v, RestObject) or isinstance(v, RestList):
+                result[k] = v.__repr_data__
+            elif isinstance(v, dict):
+                result[k] = self._walk_dict(v)
+            elif isinstance(v, list):
+                result[k] = self._recurse_list(v)
+            else:
+                result[k] = v
+
+        return result
+
+    def _recurse_list(self, obj):
+        result = []
+        for item in obj:
+            if isinstance(item, RestObject) or isinstance(item, RestList):
+                result.append(item.__repr_data__)
+            elif isinstance(item, list):
+                result.append(self._recurse_list(item))
+            elif isinstance(item, dict):
+                result.append(self._walk_dict(item))
+            else:
+                result.append(item)
+
+        return result
+
     def encode(self, obj):
         if isinstance(obj, RestObject) or isinstance(obj, RestList):
             return getattr(obj.__class__, '__repr__', super(RestEncoder, self).encode)(obj)
-        else:
-            return super(RestEncoder, self).encode(obj)
+        elif isinstance(obj, list):
+            obj = self._recurse_list(obj)
+        elif isinstance(obj, dict):
+            obj = self._walk_dict(obj)
+
+        return super(RestEncoder, self).encode(obj)
 
 
 json._default_encoder = RestEncoder()
@@ -76,11 +108,15 @@ class RestList(list):
         for item in data:
             self.append(item)
 
+    @property
+    def __repr_data__(self):
+        return json.loads(str(self))
+
     def pretty_print(self, indent=4):
-        return json.dumps([x.__repr_data__ if hasattr(x, '__repr_data__') else x for x in self], indent=indent)
+        return json.dumps(json.loads(str(self)), indent=indent)
 
     def __repr__(self):
-        return json.dumps([x.__repr_data__ if hasattr(x, '__repr_data__') else x for x in self])
+        return super(RestList, self).__repr__()
 
     def append(self, item):
         super(RestList, self).append(RestResponse.parse(item))
@@ -98,15 +134,18 @@ class RestObject(dict):
         if not isinstance(data, dict):
             raise ValueError('RestObject data must be dict object')
         self.__data__ = {}
-        self.__repr_data__ = data
         for k, v in six.iteritems(data):
             self.__data__[k] = self._init_data(v)
 
     def __repr__(self):
-        return json.dumps(self.__repr_data__)
+        return self.pretty_print(indent=None)
 
     def __str__(self):
-        return json.dumps(self.__repr_data__)
+        return self.pretty_print(indent=None)
+
+    @property
+    def __repr_data__(self):
+        return json.loads(json.dumps(self.__data__))
 
     def pretty_print(self, indent=4):
         return json.dumps(self.__repr_data__, indent=indent)
@@ -135,7 +174,7 @@ class RestObject(dict):
             return NoneProp(self, name)
 
     def __setattr__(self, name, value):
-        if name == '__data__' or name == '__repr_data__':
+        if name == '__data__':
             super(RestObject, self).__setattr__(name, value)
         else:
             self._update_object({name: value})
@@ -174,6 +213,8 @@ class RestObject(dict):
         return self.__repr_data__.viewvalues()
 
     def _init_data(self, v):
+        if isinstance(v, RestObject) or isinstance(v, RestList):
+            return v
         if isinstance(v, dict):
             return RestObject(v)
         elif isinstance(v, list):
@@ -182,7 +223,6 @@ class RestObject(dict):
             return v
 
     def _update_object(self, data):
-        self.__repr_data__.update(data)
         for k, v in six.iteritems(data):
             self.__data__[k] = self._init_data(v)
 
@@ -191,7 +231,7 @@ class RestResponse(object):
     @staticmethod
     def parse(data):
         try:
-            json.dumps(data)
+            data = json.loads(json.dumps(data))
         except Exception:
             raise ValueError('RestResponse data must be JSON serializable')
 
