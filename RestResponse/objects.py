@@ -72,6 +72,9 @@ class NoneProp(object):
     def __bool__(self):
         return False
 
+    def __nonzero__(self):
+        return False
+
     def __len__(self):
         return 0
 
@@ -166,6 +169,12 @@ class RestObject(dict):
             return self.__repr_data__ == other.__repr_data__
         else:
             return False
+
+    def __bool__(self):
+        return bool(self.__data__)
+
+    def __nonzero__(self):
+        return bool(self.__data__)
 
     def __getattr__(self, name):
         if name in self.__data__:
