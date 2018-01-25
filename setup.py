@@ -1,6 +1,6 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
-__version__ = '0.3.3'
+__version__ = '0.4.0'
 
 setup(
     name='RestResponse',
@@ -10,9 +10,10 @@ setup(
     author='Tyson Holub',
     author_email='tholub@mobiusworks.com',
     license='MIT',
-    packages=['RestResponse'],
+    packages=find_packages(exclude=['tests', 'tests.*']),
     install_requires=[
         'simplejson',
-        'six'
+        'six',
+        'SQLAlchemy'
     ]
 )

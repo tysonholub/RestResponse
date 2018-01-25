@@ -113,7 +113,26 @@ False
     }
 }
 ```
+### SQLAlchemy ORM
+RestResponse uses a Mutable mixin provided by SQLAlchemy for interfacing with databases. The following (Flask) snippet should get you started:
+```python
+from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
+from RestResponse.orm.sqlalchemy import RESTResponse
 
+
+app = Flask(__name__)
+db = SQLAlchemy(app)
+
+
+class SomeModel(db.Model):
+    id = db.Column(db.Integer(), primary_key=True)
+    data = db.Column(RESTResponse(), nullable=False)
+
+    def __init__(self, data):
+        self.data = data # data should be json serializable
+```
+Data will be saved to the database as a serialized json blob. When data is loaded it will be coerced to the underlying RestResponseObj
 
 ## Contributing
 

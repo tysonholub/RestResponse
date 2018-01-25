@@ -3,13 +3,14 @@ from __future__ import division, absolute_import, print_function, unicode_litera
 import json
 import simplejson
 import six
+from sqlalchemy.ext.mutable import Mutable
 
 
 class RestEncoder(json.JSONEncoder):
     def _walk_dict(self, obj):
         result = {}
         for k, v in six.iteritems(obj):
-            if isinstance(v, RestObject) or isinstance(v, RestList):
+            if isinstance(v, RestResponseObj):
                 result[k] = v.__repr_data__
             elif isinstance(v, dict):
                 result[k] = self._walk_dict(v)
@@ -53,6 +54,25 @@ class RestEncoder(json.JSONEncoder):
 
 json._default_encoder = RestEncoder()
 simplejson._default_encoder = RestEncoder()
+
+
+class RestResponseObj(Mutable, object):
+    __parent__ = None
+
+    @classmethod
+    def coerce(cls, key, value):
+        if isinstance(value, dict) and not isinstance(value, RestObject):
+            return RestObject(value)
+        elif isinstance(value, list) and not isinstance(value, RestList):
+            return RestList(value)
+        else:
+            return value
+
+    def changed(self):
+        if self.__parent__:
+            self.__parent__.changed()
+        else:
+            super(RestResponseObj, self).changed()
 
 
 class NoneProp(object):
@@ -109,10 +129,12 @@ class NoneProp(object):
         return NoneProp(self, name)
 
 
-class RestList(list):
-    def __init__(self, data):
+class RestList(RestResponseObj, list):
+    def __init__(self, data, parent=None):
         if not isinstance(data, list):
             raise ValueError('RestList data must be list object')
+
+        self.__parent__ = parent
 
         for item in data:
             self.append(item)
@@ -122,27 +144,39 @@ class RestList(list):
         return json.loads(str(self))
 
     def pretty_print(self, indent=4):
-        return json.dumps(json.loads(str(self)), indent=indent)
+        return json.dumps(self, indent=indent)
 
     def __repr__(self):
         return super(RestList, self).__repr__()
 
     def append(self, item):
-        super(RestList, self).append(RestResponse.parse(item))
+        super(RestList, self).append(RestResponse.parse(item, parent=self))
+        self.changed()
 
     def extend(self, items):
         for item in items:
             self.append(item)
 
     def insert(self, index, item):
-        super(RestList, self).insert(index, RestResponse.parse(item))
+        super(RestList, self).insert(index, RestResponse.parse(item, parent=self))
+        self.changed()
+
+    def pop(self):
+        value = super(RestList, self).pop()
+        self.changed()
+        return value
+
+    def remove(self, item):
+        super(RestList, self).remove(item)
+        self.changed()
 
 
-class RestObject(dict):
-    def __init__(self, data):
+class RestObject(RestResponseObj, dict):
+    def __init__(self, data, parent=None):
         if not isinstance(data, dict):
             raise ValueError('RestObject data must be dict object')
         self.__data__ = {}
+        self.__parent__ = parent
         for k, v in six.iteritems(data):
             self.__data__[k] = self._init_data(v)
 
@@ -157,14 +191,35 @@ class RestObject(dict):
         return json.loads(json.dumps(self.__data__))
 
     def pretty_print(self, indent=4):
-        return json.dumps(self.__repr_data__, indent=indent)
-
-    @property
-    def __dict__(self):
-        return self.__repr_data__
+        return json.dumps(self.__data__, indent=indent)
 
     def __dir__(self):
-        return dir(self.__repr_data__)
+        return dir(self.__data__) + self.keys()
+
+    def __delattr__(self, name):
+        if name in self.__data__:
+            del self.__data__[name]
+            self.changed()
+
+    def clear(self):
+        self.__data__ = {}
+        self.changed()
+
+    def pop(self, name):
+        if name in self.__data__:
+            value = self.__data__.pop(name)
+            self.changed()
+            return value
+        else:
+            return None
+
+    def popitem(self, name):
+        if name in self.__data__:
+            value = self.__data__.pop(name)
+            self.changed()
+            return (name, value)
+        else:
+            return None
 
     def __iter__(self):
         for x in self.keys():
@@ -185,11 +240,17 @@ class RestObject(dict):
     def __getattr__(self, name):
         if name in self.__data__:
             return self.__data__.get(name)
+        elif name == '__clause_element__':
+            # SQLAlchmey TypeDecorator support
+            # if we don't filter this prop, SQLAlchemy will __call__ on NoneProp
+            raise AttributeError(name)
+        elif name == '__parent__':
+            return self.__parent__
         else:
             return NoneProp(self, name)
 
     def __setattr__(self, name, value):
-        if name == '__data__':
+        if name == '__data__' or name == '__parent__':
             super(RestObject, self).__setattr__(name, value)
         else:
             self._update_object({name: value})
@@ -201,7 +262,7 @@ class RestObject(dict):
         return self.__repr_data__.get(key, default)
 
     def has_key(self, key):
-        return self.__repr_data__.has_key(key) # NOQA
+        return key in self.__repr_data__
 
     def items(self):
         return self.__repr_data__.items()
@@ -227,32 +288,36 @@ class RestObject(dict):
     def viewvalues(self):
         return self.__repr_data__.viewvalues()
 
+    def update(self, data):
+        if isinstance(data, dict):
+            self._update_object(data)
+
     def _init_data(self, v):
-        if isinstance(v, RestObject) or isinstance(v, RestList):
-            return v
-        if isinstance(v, dict):
-            return RestObject(v)
-        elif isinstance(v, list):
-            return RestList(v)
-        else:
-            return v
+        if isinstance(v, dict) and not isinstance(v, RestObject):
+            v = RestObject(v, parent=self)
+        elif isinstance(v, list) and not isinstance(v, RestList):
+            v = RestList(v, parent=self)
+        return v
 
     def _update_object(self, data):
         for k, v in six.iteritems(data):
             self.__data__[k] = self._init_data(v)
+        self.changed()
 
 
 class RestResponse(object):
     @staticmethod
-    def parse(data):
+    def parse(data, parent=None):
         try:
             data = json.loads(json.dumps(data))
         except Exception:
             raise ValueError('RestResponse data must be JSON serializable')
 
         if isinstance(data, dict):
-            return RestObject(data)
+            return RestObject(data, parent=parent)
         elif isinstance(data, list):
-            return RestList(data)
+            return RestList(data, parent=parent)
+        elif isinstance(data, type(None)):
+            return RestObject({}, parent=parent)
         else:
             return data
