@@ -7,6 +7,12 @@ from sqlalchemy.ext.mutable import Mutable
 
 
 class RestEncoder(json.JSONEncoder):
+    def __init__(self, *args, **kwargs):
+        try:
+            super(RestEncoder, self).__init__(*args, **kwargs)
+        except TypeError:
+            super(RestEncoder, self).__init__()
+
     def _walk_dict(self, obj):
         result = {}
         for k, v in six.iteritems(obj):
