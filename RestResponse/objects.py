@@ -32,7 +32,7 @@ class RestEncoder(json.JSONEncoder):
     def _recurse_list(self, obj):
         result = []
         for item in obj:
-            if isinstance(item, RestObject) or isinstance(item, RestList):
+            if isinstance(item, RestResponseObj):
                 result.append(item.__repr_data__)
             elif isinstance(item, list):
                 result.append(self._recurse_list(item))
@@ -46,7 +46,7 @@ class RestEncoder(json.JSONEncoder):
         return result
 
     def encode(self, obj):
-        if isinstance(obj, RestObject) or isinstance(obj, RestList):
+        if isinstance(obj, RestResponseObj):
             return getattr(obj.__class__, '__repr__', super(RestEncoder, self).encode)(obj)
         elif isinstance(obj, list):
             obj = self._recurse_list(obj)
@@ -147,7 +147,7 @@ class RestList(RestResponseObj, list):
 
     @property
     def __repr_data__(self):
-        return json.loads(str(self))
+        return json.loads(self.pretty_print())
 
     def pretty_print(self, indent=4):
         return json.dumps(self, indent=indent)
