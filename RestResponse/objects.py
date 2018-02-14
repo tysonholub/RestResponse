@@ -23,6 +23,8 @@ class RestEncoder(json.JSONEncoder):
                 result[k] = self._walk_dict(v)
             elif isinstance(v, list):
                 result[k] = self._recurse_list(v)
+            elif isinstance(v, Decimal):
+                result[k] = float(v)
             else:
                 if isinstance(v, NoneProp):
                     v = None
@@ -39,6 +41,8 @@ class RestEncoder(json.JSONEncoder):
                 result.append(self._recurse_list(item))
             elif isinstance(item, dict):
                 result.append(self._walk_dict(item))
+            elif isinstance(item, Decimal):
+                result.append(float(item))
             else:
                 if isinstance(item, NoneProp):
                     item = None
@@ -56,7 +60,7 @@ class RestEncoder(json.JSONEncoder):
         elif isinstance(obj, NoneProp):
             obj = None
         elif isinstance(obj, Decimal):
-            return str(obj)
+            return float(obj)
 
         return super(RestEncoder, self).encode(obj)
 
@@ -306,6 +310,8 @@ class RestObject(RestResponseObj, dict):
             v = RestObject(v, parent=self)
         elif isinstance(v, list) and not isinstance(v, RestList):
             v = RestList(v, parent=self)
+        elif isinstance(v, Decimal):
+            v = float(v)
         return v
 
     def _update_object(self, data):
@@ -328,5 +334,7 @@ class RestResponse(object):
             return RestList(data, parent=parent)
         elif isinstance(data, type(None)):
             return RestObject({}, parent=parent)
+        elif isinstance(data, Decimal):
+            return float(data)
         else:
             return data
