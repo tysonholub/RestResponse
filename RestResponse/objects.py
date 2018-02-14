@@ -3,6 +3,7 @@ from __future__ import division, absolute_import, print_function, unicode_litera
 import json
 import simplejson
 import six
+from decimal import Decimal
 from sqlalchemy.ext.mutable import Mutable
 
 
@@ -54,6 +55,8 @@ class RestEncoder(json.JSONEncoder):
             obj = self._walk_dict(obj)
         elif isinstance(obj, NoneProp):
             obj = None
+        elif isinstance(obj, Decimal):
+            return str(obj)
 
         return super(RestEncoder, self).encode(obj)
 
