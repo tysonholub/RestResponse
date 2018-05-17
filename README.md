@@ -134,6 +134,10 @@ class SomeModel(db.Model):
 ```
 Data will be saved to the database as a serialized json blob. When data is loaded it will be coerced to the underlying RestResponseObj
 
+## Testing
+
+    $ pytest -s tests.py
+
 ## Contributing
 
 Bug reports and pull requests are welcome on GitHub at https://github.com/MobiusWorksLLC/RestResponse.git. This project is
