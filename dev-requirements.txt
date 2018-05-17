@@ -1,0 +1,6 @@
+simplejson
+six
+SQLAlchemy
+flake8
+pytest
+requests

@@ -199,6 +199,12 @@ class RestObject(RestResponseObj, dict):
     def __str__(self):
         return self.pretty_print(indent=None)
 
+    def __contains__(self, key):
+        return key in self.__data__
+
+    def __len__(self):
+        return len(self.__data__)
+
     @property
     def __repr_data__(self):
         return json.loads(json.dumps(self.__data__))

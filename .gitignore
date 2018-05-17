@@ -3,3 +3,4 @@ dist/
 *.pyc
 RestResponse.egg-info
 .python-version
+.pytest_cache
