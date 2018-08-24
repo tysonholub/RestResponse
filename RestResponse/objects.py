@@ -138,6 +138,9 @@ class NoneProp(object):
 
             parent._update_object(result)
 
+    def __delattr__(self, name):
+        pass
+
     def __getattr__(self, name):
         return NoneProp(self, name)
 
