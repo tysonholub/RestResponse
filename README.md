@@ -140,7 +140,7 @@ Data will be saved to the database as a serialized json blob. When data is loade
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/MobiusWorksLLC/RestResponse.git. This project is
+Bug reports and pull requests are welcome on GitHub at https://github.com/tysonholub/RestResponse.git. This project is
 intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the
 [Contributor Covenant](http://contributor-covenant.org) code of conduct.
 

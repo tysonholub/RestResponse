@@ -1,7 +1,7 @@
 import os
 from setuptools import setup, find_packages
 
-__version__ = '0.4.7'
+__version__ = '0.4.8'
 
 
 def read(fname):
@@ -14,9 +14,9 @@ setup(
     description='A fluent python object for interfacing with RESTful JSON APIs.',
     long_description=read('README.md'),
     long_description_content_type='text/markdown',
-    url='https://github.com/MobiusWorksLLC/RestResponse.git',
+    url='https://github.com/tysonholub/RestResponse.git',
     author='Tyson Holub',
-    author_email='tholub@mobiusworks.com',
+    author_email='tyson@tysonholub.com',
     license='MIT',
     packages=find_packages(exclude=['tests', 'tests.*']),
     install_requires=[
