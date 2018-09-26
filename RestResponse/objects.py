@@ -4,6 +4,7 @@ import json
 import simplejson
 import six
 from decimal import Decimal
+from datetime import datetime
 from sqlalchemy.ext.mutable import Mutable
 
 
@@ -25,6 +26,8 @@ class RestEncoder(json.JSONEncoder):
                 result[k] = self._recurse_list(v)
             elif isinstance(v, Decimal):
                 result[k] = float(v)
+            elif isinstance(v, datetime):
+                result[k] = v.isoformat()
             else:
                 if isinstance(v, NoneProp):
                     v = None
@@ -43,6 +46,8 @@ class RestEncoder(json.JSONEncoder):
                 result.append(self._walk_dict(item))
             elif isinstance(item, Decimal):
                 result.append(float(item))
+            elif isinstance(item, datetime):
+                result.append(item.isoformat())
             else:
                 if isinstance(item, NoneProp):
                     item = None
@@ -61,6 +66,8 @@ class RestEncoder(json.JSONEncoder):
             obj = None
         elif isinstance(obj, Decimal):
             return float(obj)
+        elif isinstance(obj, datetime):
+            return obj.isoformat()
 
         return super(RestEncoder, self).encode(obj)
 
