@@ -3,6 +3,8 @@ from __future__ import division, absolute_import, print_function, unicode_litera
 import json
 import simplejson
 import six
+import base64
+import string
 from decimal import Decimal
 from datetime import datetime
 from sqlalchemy.ext.mutable import Mutable
@@ -14,6 +16,21 @@ class RestEncoder(json.JSONEncoder):
             super(RestEncoder, self).__init__(*args, **kwargs)
         except TypeError:
             super(RestEncoder, self).__init__()
+
+    def _istext(self, s, text_characters="".join(map(chr, range(32, 127))) + "\n\r\t\b", threshold=0.30):
+        """
+        Helper to attempt support of serializing binary text by base64 encoding `s` if this returns False
+
+        Credit: https://www.oreilly.com/library/view/python-cookbook-2nd/0596007973/ch01s12.html
+        """
+        if "\0".encode() in s:
+            return False
+        if not s:
+            return True
+
+        t = s.translate(string.maketrans("", ""), text_characters.encode())
+        # s is 'text' if less than 30% of its characters are non-text ones:
+        return len(t)/len(s) <= threshold
 
     def _walk_dict(self, obj):
         result = {}
@@ -28,6 +45,8 @@ class RestEncoder(json.JSONEncoder):
                 result[k] = float(v)
             elif isinstance(v, datetime):
                 result[k] = v.isoformat()
+            elif isinstance(v, str) and not self._istext(v):
+                result[k] = '__base64__: %s' % base64.b64encode(v)
             else:
                 if isinstance(v, NoneProp):
                     v = None
@@ -48,6 +67,8 @@ class RestEncoder(json.JSONEncoder):
                 result.append(float(item))
             elif isinstance(item, datetime):
                 result.append(item.isoformat())
+            elif isinstance(item, str) and not self._istext(item):
+                result.append('__base64__: %s' % base64.b64encode(item))
             else:
                 if isinstance(item, NoneProp):
                     item = None
@@ -68,6 +89,8 @@ class RestEncoder(json.JSONEncoder):
             return float(obj)
         elif isinstance(obj, datetime):
             return obj.isoformat()
+        elif isinstance(obj, str) and not self._istext(obj):
+            return '__base64__: %s' % base64.b64encode(obj)
 
         return super(RestEncoder, self).encode(obj)
 
