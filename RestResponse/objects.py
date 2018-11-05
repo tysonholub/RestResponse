@@ -6,7 +6,7 @@ import six
 import base64
 import string
 from decimal import Decimal
-from datetime import datetime
+from datetime import datetime, date
 from sqlalchemy.ext.mutable import Mutable
 
 
@@ -43,7 +43,7 @@ class RestEncoder(json.JSONEncoder):
                 result[k] = self._recurse_list(v)
             elif isinstance(v, Decimal):
                 result[k] = float(v)
-            elif isinstance(v, datetime):
+            elif isinstance(v, datetime) or isinstance(v, date):
                 result[k] = v.isoformat()
             elif isinstance(v, str) and not self._istext(v):
                 result[k] = '__base64__: %s' % base64.b64encode(v)
@@ -65,7 +65,7 @@ class RestEncoder(json.JSONEncoder):
                 result.append(self._walk_dict(item))
             elif isinstance(item, Decimal):
                 result.append(float(item))
-            elif isinstance(item, datetime):
+            elif isinstance(item, datetime) or isinstance(item, date):
                 result.append(item.isoformat())
             elif isinstance(item, str) and not self._istext(item):
                 result.append('__base64__: %s' % base64.b64encode(item))
@@ -87,7 +87,7 @@ class RestEncoder(json.JSONEncoder):
             obj = None
         elif isinstance(obj, Decimal):
             return float(obj)
-        elif isinstance(obj, datetime):
+        elif isinstance(obj, datetime) or isinstance(obj, date):
             return obj.isoformat()
         elif isinstance(obj, str) and not self._istext(obj):
             return '__base64__: %s' % base64.b64encode(obj)

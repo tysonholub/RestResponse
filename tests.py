@@ -1,5 +1,8 @@
 import RestResponse
 import requests
+from datetime import datetime
+from decimal import Decimal
+import base64
 
 
 def test_none_prop():
@@ -57,3 +60,23 @@ def test_encode_on_request():
         assert key in user.keys()
     user.clear()
     assert len(user) == 0
+
+
+def test_supported_encoder_types():
+    d1 = datetime.utcnow()
+    d2 = d1.date()
+    decimal = Decimal('3.1459')
+    binary = requests.get('https://picsum.photos/1').content
+
+    data = RestResponse.parse({
+        'datetime': d1,
+        'date': d2,
+        'decimal': decimal,
+        'base64': binary
+    })
+
+    assert data.datetime == d1.isoformat()
+    assert data.date == d2.isoformat()
+    assert data.decimal == float(Decimal('3.1459'))
+    assert data.base64.startswith('__base64__: ')
+    assert data.base64.split(' ')[-1] == base64.b64encode(binary)
