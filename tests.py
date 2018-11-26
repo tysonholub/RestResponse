@@ -8,6 +8,7 @@ import base64
 def test_none_prop():
     obj = RestResponse.parse({})
     assert not obj.missing_prop
+    assert not obj.missing_prop_call()
     assert isinstance(obj.prop, RestResponse.NoneProp)
 
 

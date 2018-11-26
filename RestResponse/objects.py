@@ -147,6 +147,9 @@ class NoneProp(object):
     def __len__(self):
         return 0
 
+    def __call__(self):
+        return None
+
     def __setattr__(self, name, value):
         if name == '__parent__' or name == '__prop__':
             super(NoneProp, self).__setattr__(name, value)
