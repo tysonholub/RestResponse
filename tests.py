@@ -3,6 +3,8 @@ import requests
 from datetime import datetime
 from decimal import Decimal
 import base64
+import json
+import cloudpickle as pickle
 
 
 def test_none_prop():
@@ -50,9 +52,11 @@ def test_encode_on_request():
     user = RestResponse.parse(r.json())
     user.update({
         'name': 'Test New Name',
-        'new_field': 'Test New Field'
+        'new_field': 'Test New Field',
+        'binary': requests.get('https://picsum.photos/1').content,
+        'callable': lambda x: x + 1
     })
-    r = requests.put('http://jsonplaceholder.typicode.com/users/{0}'.format(user.id), json=user)
+    r = requests.put('http://jsonplaceholder.typicode.com/users/{0}'.format(user.id), json=user())
     assert r.ok
     user = RestResponse.parse(r.json())
     assert user.name == 'Test New Name'
@@ -73,11 +77,20 @@ def test_supported_encoder_types():
         'datetime': d1,
         'date': d2,
         'decimal': decimal,
-        'base64': binary
+        'binary': binary,
+        'callable': lambda x: x + 1
     })
 
-    assert data.datetime == d1.isoformat()
-    assert data.date == d2.isoformat()
+    assert data.datetime == d1
+    assert data.date == d2
     assert data.decimal == float(Decimal('3.1459'))
-    assert data.base64.startswith('__base64__: ')
-    assert data.base64.split(' ')[-1] == base64.b64encode(binary)
+    assert data.binary == binary
+    assert data.callable(1) == 2
+
+    raw = json.loads(repr(data))
+    assert raw['binary'].startswith('__binary__: ')
+    assert base64.b64decode(raw['binary'].replace('__binary__: ', '')) == binary
+    assert raw['callable'].startswith('__callable__: ')
+    assert pickle.loads(base64.b64decode(raw['callable'].replace('__callable__: ', ''))).func_code == \
+        data.callable.func_code
+    assert pickle.loads(base64.b64decode(raw['callable'].replace('__callable__: ', '')))(1) == 2

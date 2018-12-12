@@ -1,43 +1,25 @@
-from __future__ import division, absolute_import, print_function, unicode_literals
+# from __future__ import division, absolute_import, print_function, unicode_literals
 
 import json
-import simplejson
 import six
 import base64
-import string
+import cloudpickle as pickle
 from decimal import Decimal
 from datetime import datetime, date
 from sqlalchemy.ext.mutable import Mutable
+from RestResponse.utils import istext, CustomObjectEncoder
 
 
-class RestEncoder(json.JSONEncoder):
-    def __init__(self, *args, **kwargs):
-        try:
-            super(RestEncoder, self).__init__(*args, **kwargs)
-        except TypeError:
-            super(RestEncoder, self).__init__()
-
-    def _istext(self, s, text_characters="".join(map(chr, range(32, 127))) + "\n\r\t\b", threshold=0.30):
-        """
-        Helper to attempt support of serializing binary text by base64 encoding `s` if this returns False
-
-        Credit: https://www.oreilly.com/library/view/python-cookbook-2nd/0596007973/ch01s12.html
-        """
-        if "\0".encode() in s:
+class RestEncoder(CustomObjectEncoder):
+    def isinstance(self, obj, cls):
+        if isinstance(obj, (RestResponseObj, NoneProp)):
             return False
-        if not s:
-            return True
-
-        t = s.translate(string.maketrans("", ""), text_characters.encode())
-        # s is 'text' if less than 30% of its characters are non-text ones:
-        return len(t)/len(s) <= threshold
+        return isinstance(obj, cls)
 
     def _walk_dict(self, obj):
         result = {}
         for k, v in six.iteritems(obj):
-            if isinstance(v, RestResponseObj):
-                result[k] = v.__repr_data__
-            elif isinstance(v, dict):
+            if isinstance(v, dict):
                 result[k] = self._walk_dict(v)
             elif isinstance(v, list):
                 result[k] = self._recurse_list(v)
@@ -45,8 +27,10 @@ class RestEncoder(json.JSONEncoder):
                 result[k] = float(v)
             elif isinstance(v, datetime) or isinstance(v, date):
                 result[k] = v.isoformat()
-            elif isinstance(v, str) and not self._istext(v):
-                result[k] = '__base64__: %s' % base64.b64encode(v)
+            elif isinstance(v, str) and not istext(v):
+                result[k] = '__binary__: %s' % base64.b64encode(v)
+            elif callable(v):
+                result[k] = '__callable__: %s' % base64.b64encode(pickle.dumps(v))
             else:
                 if isinstance(v, NoneProp):
                     v = None
@@ -57,9 +41,7 @@ class RestEncoder(json.JSONEncoder):
     def _recurse_list(self, obj):
         result = []
         for item in obj:
-            if isinstance(item, RestResponseObj):
-                result.append(item.__repr_data__)
-            elif isinstance(item, list):
+            if isinstance(item, list):
                 result.append(self._recurse_list(item))
             elif isinstance(item, dict):
                 result.append(self._walk_dict(item))
@@ -67,8 +49,10 @@ class RestEncoder(json.JSONEncoder):
                 result.append(float(item))
             elif isinstance(item, datetime) or isinstance(item, date):
                 result.append(item.isoformat())
-            elif isinstance(item, str) and not self._istext(item):
-                result.append('__base64__: %s' % base64.b64encode(item))
+            elif isinstance(item, str) and not istext(item):
+                result.append('__binary__: %s' % base64.b64encode(item))
+            elif callable(item):
+                result.append('__callable__: %s' % base64.b64encode(pickle.dumps(item)))
             else:
                 if isinstance(item, NoneProp):
                     item = None
@@ -76,27 +60,24 @@ class RestEncoder(json.JSONEncoder):
 
         return result
 
-    def encode(self, obj):
-        if isinstance(obj, RestResponseObj):
-            return getattr(obj.__class__, '__repr__', super(RestEncoder, self).encode)(obj)
-        elif isinstance(obj, list):
-            obj = self._recurse_list(obj)
+    def default(self, obj):
+        if isinstance(obj, list):
+            return self._recurse_list(obj)
         elif isinstance(obj, dict):
-            obj = self._walk_dict(obj)
+            return self._walk_dict(obj)
         elif isinstance(obj, NoneProp):
             obj = None
         elif isinstance(obj, Decimal):
             return float(obj)
         elif isinstance(obj, datetime) or isinstance(obj, date):
             return obj.isoformat()
-        elif isinstance(obj, str) and not self._istext(obj):
-            return '__base64__: %s' % base64.b64encode(obj)
+        elif isinstance(obj, str) and not istext(obj):
+            return '__binary__: %s' % base64.b64encode(obj)
+        elif callable(obj):
+            return '__callable__: %s' % base64.b64encode(pickle.dumps(obj))
 
-        return super(RestEncoder, self).encode(obj)
-
-
-json._default_encoder = RestEncoder()
-simplejson._default_encoder = RestEncoder()
+        else:
+            return None
 
 
 class RestResponseObj(Mutable, object):
@@ -116,6 +97,9 @@ class RestResponseObj(Mutable, object):
             self.__parent__.changed()
         else:
             super(RestResponseObj, self).changed()
+
+    def __call__(self):
+        return json.loads(json.dumps(self, cls=RestEncoder))
 
 
 class NoneProp(object):
@@ -189,16 +173,37 @@ class RestList(RestResponseObj, list):
             self.append(item)
 
     @property
-    def __repr_data__(self):
+    def __data__(self):
         return json.loads(self.pretty_print())
 
     def pretty_print(self, indent=4):
-        return json.dumps(self, indent=indent)
+        return json.dumps(self, cls=RestEncoder, indent=indent)
 
     def __repr__(self):
         return super(RestList, self).__repr__()
 
+    def __getitem__(self, index):
+        item = super(RestList, self).__getitem__(index)
+        if str(item).startswith('__callable__: '):
+            item = pickle.loads(base64.b64decode(item.replace('__callable__: ', '')))
+        elif str(item).startswith('__binary__: '):
+            item = base64.b64decode(item.replace('__binary__: ', ''))
+        return item
+
+    def __iter__(self):
+        for item in list.__iter__(self):
+            if str(item).startswith('__callable__: '):
+                yield pickle.loads(base64.b64decode(item.replace('__callable__: ', '')))
+            elif str(item).startswith('__binary__: '):
+                yield base64.b64decode(item.replace('__binary__: ', ''))
+            else:
+                yield item
+
     def append(self, item):
+        if callable(item):
+            item = '__callable__: %s' % base64.b64encode(pickle.dumps(item))
+        elif isinstance(item, str) and not istext(item):
+            item = '__binary__: %s' % base64.b64encode(item)
         super(RestList, self).append(RestResponse.parse(item, parent=self))
         self.changed()
 
@@ -207,6 +212,10 @@ class RestList(RestResponseObj, list):
             self.append(item)
 
     def insert(self, index, item):
+        if str(item).startswith('__callable__: '):
+            item = pickle.loads(item.replace('__callable__: ', ''))
+        elif str(item).startswith('__binary__: '):
+            item = base64.b64decode(item.replace('__binary__: ', ''))
         super(RestList, self).insert(index, RestResponse.parse(item, parent=self))
         self.changed()
 
@@ -230,7 +239,7 @@ class RestObject(RestResponseObj, dict):
             self.__data__[k] = self._init_data(v)
 
     def __repr__(self):
-        return self.pretty_print(indent=None)
+        return json.dumps(self, cls=RestEncoder, indent=None)
 
     def __str__(self):
         return self.pretty_print(indent=None)
@@ -241,12 +250,8 @@ class RestObject(RestResponseObj, dict):
     def __len__(self):
         return len(self.__data__)
 
-    @property
-    def __repr_data__(self):
-        return json.loads(json.dumps(self.__data__))
-
     def pretty_print(self, indent=4):
-        return json.dumps(self.__data__, indent=indent)
+        return json.dumps(self, cls=RestEncoder, indent=indent)
 
     def __dir__(self):
         return dir(self.__data__) + self.keys()
@@ -282,7 +287,7 @@ class RestObject(RestResponseObj, dict):
 
     def __eq__(self, other):
         if type(other) == type(self):
-            return self.__repr_data__ == other.__repr_data__
+            return self.__data__ == other.__data__
         else:
             return False
 
@@ -311,37 +316,37 @@ class RestObject(RestResponseObj, dict):
             self._update_object({name: value})
 
     def keys(self):
-        return self.__repr_data__.keys()
+        return self.__data__.keys()
 
     def get(self, key, default=None):
-        return self.__repr_data__.get(key, default)
+        return self.__data__.get(key, default)
 
     def has_key(self, key):
-        return key in self.__repr_data__
+        return key in self.__data__
 
     def items(self):
-        return self.__repr_data__.items()
+        return self.__data__.items()
 
     def iteritems(self):
-        return six.iteritems(self.__repr_data__)
+        return six.iteritems(self.__data__)
 
     def iterkeys(self):
-        return self.__repr_data__.iterkeys()
+        return self.__data__.iterkeys()
 
     def itervalues(self):
-        return self.__repr_data__.itervalues()
+        return self.__data__.itervalues()
 
     def values(self):
-        return self.__repr_data__.values()
+        return self.__data__.values()
 
     def viewitems(self):
-        return self.__repr_data__.viewitems()
+        return self.__data__.viewitems()
 
     def viewkeys(self):
-        return self.__repr_data__.viewkeys()
+        return self.__data__.viewkeys()
 
     def viewvalues(self):
-        return self.__repr_data__.viewvalues()
+        return self.__data__.viewvalues()
 
     def update(self, data):
         if isinstance(data, dict):
@@ -354,6 +359,10 @@ class RestObject(RestResponseObj, dict):
             v = RestList(v, parent=self)
         elif isinstance(v, Decimal):
             v = float(v)
+        elif isinstance(str(v), str) and str(v).startswith('__callable__: '):
+            v = pickle.loads(base64.b64decode(str(v).replace('__callable__: ', '')))
+        elif isinstance(str(v), str) and str(v).startswith('__binary__: '):
+            v = base64.b64decode(str(v).replace('__binary__: ', ''))
         return v
 
     def _update_object(self, data):
@@ -363,13 +372,14 @@ class RestObject(RestResponseObj, dict):
 
 
 class RestResponse(object):
+    def __new__(self, data):
+        if isinstance(data, str) or isinstance(data, unicode):
+            return RestResponse.loads(data)
+        else:
+            return RestResponse.parse(data)
+
     @staticmethod
     def parse(data, parent=None):
-        try:
-            data = json.loads(json.dumps(data))
-        except Exception:
-            raise ValueError('RestResponse data must be JSON serializable')
-
         if isinstance(data, dict):
             return RestObject(data, parent=parent)
         elif isinstance(data, list):
@@ -378,5 +388,18 @@ class RestResponse(object):
             return RestObject({}, parent=parent)
         elif isinstance(data, Decimal):
             return float(data)
+        elif isinstance(data, str) and not istext(data):
+            return '__binary__: %s' % base64.b64encode(data)
+        elif callable(data):
+            return '__callable__: %s' % base64.b64encode(pickle.dumps(data))
         else:
             return data
+
+    @staticmethod
+    def loads(data):
+        try:
+            data = json.loads(data)
+        except Exception:
+            raise ValueError('RestResponse data must be JSON deserializable')
+
+        return RestResponse.parse(data)

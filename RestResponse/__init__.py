@@ -4,8 +4,9 @@ from .objects import (
 from . import orm
 
 parse = RestResponse.parse
+loads = RestResponse.loads
 
 __all__ = [
-    'RestEncoder', 'RestResponse', 'RestObject', 'RestList', 'NoneProp', 'parse', 'orm',
+    'RestEncoder', 'RestResponse', 'RestObject', 'RestList', 'NoneProp', 'parse', 'loads', 'orm',
     'RestResponseObj'
 ]

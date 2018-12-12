@@ -1,5 +1,6 @@
 simplejson
 six
+cloudpickle
 SQLAlchemy
 flake8
 pytest

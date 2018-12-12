@@ -1,7 +1,7 @@
 import os
 from setuptools import setup, find_packages
 
-__version__ = '0.5.2'
+__version__ = '0.6.0'
 
 
 def read(fname):
@@ -22,6 +22,7 @@ setup(
     install_requires=[
         'simplejson',
         'six',
-        'SQLAlchemy'
+        'SQLAlchemy',
+        'cloudpickle'
     ]
 )
