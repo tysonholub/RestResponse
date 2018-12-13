@@ -22,7 +22,7 @@ def istext(s, text_characters="".join(map(chr, range(32, 127))) + "\n\r\t\b", th
 
 class CustomObjectEncoder(JSONEncoder):
     """
-    Credit: https://stackoverflow.com/questions/16405969/how-to-change-json-encoding-behaviour-for-serializable-python-object/16406798#answer-17684652
+    Credit: https://stackoverflow.com/questions/16405969/how-to-change-json-encoding-behaviour-for-serializable-python-object/16406798#answer-17684652  # NOQA
     """
     def iterencode(self, o, _one_shot=False):
         """

@@ -1,6 +1,7 @@
 # from __future__ import division, absolute_import, print_function, unicode_literals
 
 import json
+import simplejson
 import six
 import base64
 import cloudpickle as pickle
@@ -78,6 +79,10 @@ class RestEncoder(CustomObjectEncoder):
 
         else:
             return None
+
+
+json._default_encoder = RestEncoder()
+simplejson._default_encoder = RestEncoder()
 
 
 class RestResponseObj(Mutable, object):

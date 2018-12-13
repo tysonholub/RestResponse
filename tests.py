@@ -56,9 +56,14 @@ def test_encode_on_request():
         'binary': requests.get('https://picsum.photos/1').content,
         'callable': lambda x: x + 1
     })
+    r = requests.put('http://jsonplaceholder.typicode.com/users/{0}'.format(user.id), json=user)
+    assert r.ok
     r = requests.put('http://jsonplaceholder.typicode.com/users/{0}'.format(user.id), json=user())
     assert r.ok
     user = RestResponse.parse(r.json())
+    assert user.name == 'Test New Name'
+    assert user.new_field == 'Test New Field'
+    user = RestResponse.loads(r.text)
     assert user.name == 'Test New Name'
     assert user.new_field == 'Test New Field'
     for key in user:
