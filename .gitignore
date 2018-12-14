@@ -4,3 +4,4 @@ dist/
 RestResponse.egg-info
 .python-version
 .pytest_cache
+.tox/

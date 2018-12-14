@@ -1,17 +1,13 @@
-# from __future__ import division, absolute_import, print_function, unicode_literals
-
 import json
 import simplejson
 import six
-import base64
-import cloudpickle as pickle
 from decimal import Decimal
 from datetime import datetime, date
 from sqlalchemy.ext.mutable import Mutable
-from RestResponse.utils import istext, CustomObjectEncoder
+from RestResponse import utils
 
 
-class RestEncoder(CustomObjectEncoder):
+class RestEncoder(utils.CustomObjectEncoder):
     def isinstance(self, obj, cls):
         if isinstance(obj, (RestResponseObj, NoneProp)):
             return False
@@ -28,10 +24,10 @@ class RestEncoder(CustomObjectEncoder):
                 result[k] = float(v)
             elif isinstance(v, datetime) or isinstance(v, date):
                 result[k] = v.isoformat()
-            elif isinstance(v, str) and not istext(v):
-                result[k] = '__binary__: %s' % base64.b64encode(v)
+            elif isinstance(v, str) and not utils.istext(v) or utils.PYTHON3 and isinstance(v, bytes):
+                result[k] = utils.encode_binary(v)
             elif callable(v):
-                result[k] = '__callable__: %s' % base64.b64encode(pickle.dumps(v))
+                result[k] = utils.encode_callable(v)
             else:
                 if isinstance(v, NoneProp):
                     v = None
@@ -50,10 +46,10 @@ class RestEncoder(CustomObjectEncoder):
                 result.append(float(item))
             elif isinstance(item, datetime) or isinstance(item, date):
                 result.append(item.isoformat())
-            elif isinstance(item, str) and not istext(item):
-                result.append('__binary__: %s' % base64.b64encode(item))
+            elif isinstance(item, str) and not utils.istext(item) or utils.PYTHON3 and isinstance(item, bytes):
+                result.append(utils.encode_binary(item))
             elif callable(item):
-                result.append('__callable__: %s' % base64.b64encode(pickle.dumps(item)))
+                result.append(utils.encode_callable(item))
             else:
                 if isinstance(item, NoneProp):
                     item = None
@@ -72,11 +68,10 @@ class RestEncoder(CustomObjectEncoder):
             return float(obj)
         elif isinstance(obj, datetime) or isinstance(obj, date):
             return obj.isoformat()
-        elif isinstance(obj, str) and not istext(obj):
-            return '__binary__: %s' % base64.b64encode(obj)
+        elif isinstance(obj, str) and not utils.istext(obj) or utils.PYTHON3 and isinstance(obj, bytes):
+            return utils.encode_binary(obj)
         elif callable(obj):
-            return '__callable__: %s' % base64.b64encode(pickle.dumps(obj))
-
+            return utils.encode_callable(obj)
         else:
             return None
 
@@ -190,25 +185,25 @@ class RestList(RestResponseObj, list):
     def __getitem__(self, index):
         item = super(RestList, self).__getitem__(index)
         if str(item).startswith('__callable__: '):
-            item = pickle.loads(base64.b64decode(item.replace('__callable__: ', '')))
+            item = utils.decode_callable(item)
         elif str(item).startswith('__binary__: '):
-            item = base64.b64decode(item.replace('__binary__: ', ''))
+            item = utils.decode_binary(item)
         return item
 
     def __iter__(self):
         for item in list.__iter__(self):
             if str(item).startswith('__callable__: '):
-                yield pickle.loads(base64.b64decode(item.replace('__callable__: ', '')))
+                yield utils.decode_callable(item)
             elif str(item).startswith('__binary__: '):
-                yield base64.b64decode(item.replace('__binary__: ', ''))
+                yield utils.decode_binary(item)
             else:
                 yield item
 
     def append(self, item):
         if callable(item):
-            item = '__callable__: %s' % base64.b64encode(pickle.dumps(item))
-        elif isinstance(item, str) and not istext(item):
-            item = '__binary__: %s' % base64.b64encode(item)
+            item = utils.encode_callable(item)
+        elif isinstance(item, str) and not utils.istext(item) or utils.PYTHON3 and isinstance(item, bytes):
+            item = utils.encode_binary(item)
         super(RestList, self).append(RestResponse.parse(item, parent=self))
         self.changed()
 
@@ -218,9 +213,9 @@ class RestList(RestResponseObj, list):
 
     def insert(self, index, item):
         if str(item).startswith('__callable__: '):
-            item = pickle.loads(item.replace('__callable__: ', ''))
+            item = utils.decode_callable(item)
         elif str(item).startswith('__binary__: '):
-            item = base64.b64decode(item.replace('__binary__: ', ''))
+            item = utils.decode_binary(item)
         super(RestList, self).insert(index, RestResponse.parse(item, parent=self))
         self.changed()
 
@@ -259,7 +254,7 @@ class RestObject(RestResponseObj, dict):
         return json.dumps(self, cls=RestEncoder, indent=indent)
 
     def __dir__(self):
-        return dir(self.__data__) + self.keys()
+        return dir(self.__data__) + list(self.keys())
 
     def __delattr__(self, name):
         if name in self.__data__:
@@ -365,9 +360,9 @@ class RestObject(RestResponseObj, dict):
         elif isinstance(v, Decimal):
             v = float(v)
         elif isinstance(str(v), str) and str(v).startswith('__callable__: '):
-            v = pickle.loads(base64.b64decode(str(v).replace('__callable__: ', '')))
+            v = utils.decode_callable(str(v))
         elif isinstance(str(v), str) and str(v).startswith('__binary__: '):
-            v = base64.b64decode(str(v).replace('__binary__: ', ''))
+            v = utils.decode_binary(str(v))
         return v
 
     def _update_object(self, data):
@@ -393,10 +388,10 @@ class RestResponse(object):
             return RestObject({}, parent=parent)
         elif isinstance(data, Decimal):
             return float(data)
-        elif isinstance(data, str) and not istext(data):
-            return '__binary__: %s' % base64.b64encode(data)
+        elif isinstance(data, str) and not utils.istext(data) or utils.PYTHON3 and isinstance(data, bytes):
+            return utils.encode_binary(data)
         elif callable(data):
-            return '__callable__: %s' % base64.b64encode(pickle.dumps(data))
+            return utils.encode_callable(data)
         else:
             return data
 

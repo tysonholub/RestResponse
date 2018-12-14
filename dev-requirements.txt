@@ -5,3 +5,4 @@ SQLAlchemy
 flake8
 pytest
 requests
+tox

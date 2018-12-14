@@ -1,3 +1,4 @@
+import sys
 import RestResponse
 import requests
 from datetime import datetime
@@ -94,8 +95,16 @@ def test_supported_encoder_types():
 
     raw = json.loads(repr(data))
     assert raw['binary'].startswith('__binary__: ')
-    assert base64.b64decode(raw['binary'].replace('__binary__: ', '')) == binary
+    if sys.version_info[0] < 3:
+        assert base64.b64decode(raw['binary'].replace('__binary__: ', '')) == binary
+    else:
+        assert base64.b64decode(raw['binary'].replace('__binary__: b', '')) == binary
     assert raw['callable'].startswith('__callable__: ')
-    assert pickle.loads(base64.b64decode(raw['callable'].replace('__callable__: ', ''))).func_code == \
-        data.callable.func_code
-    assert pickle.loads(base64.b64decode(raw['callable'].replace('__callable__: ', '')))(1) == 2
+    if sys.version_info[0] < 3:
+        assert pickle.loads(base64.b64decode(raw['callable'].replace('__callable__: ', ''))).func_code == \
+            data.callable.func_code
+        assert pickle.loads(base64.b64decode(raw['callable'].replace('__callable__: ', '')))(1) == 2
+    else:
+        assert pickle.loads(base64.b64decode(raw['callable'].replace('__callable__: b', ''))).__code__ == \
+            data.callable.__code__
+        assert pickle.loads(base64.b64decode(raw['callable'].replace('__callable__: b', '')))(1) == 2
