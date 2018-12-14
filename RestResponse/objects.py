@@ -67,7 +67,7 @@ class RestEncoder(CustomObjectEncoder):
         elif isinstance(obj, dict):
             return self._walk_dict(obj)
         elif isinstance(obj, NoneProp):
-            obj = None
+            return None
         elif isinstance(obj, Decimal):
             return float(obj)
         elif isinstance(obj, datetime) or isinstance(obj, date):
