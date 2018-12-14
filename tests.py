@@ -54,7 +54,7 @@ def test_encode_on_request():
     user.update({
         'name': 'Test New Name',
         'new_field': 'Test New Field',
-        'binary': requests.get('https://picsum.photos/1').content,
+        'binary': requests.get('https://cataas.com/cat').content,
         'callable': lambda x: x + 1
     })
     r = requests.put('http://jsonplaceholder.typicode.com/users/{0}'.format(user.id), json=user)
@@ -77,7 +77,7 @@ def test_supported_encoder_types():
     d1 = datetime.utcnow()
     d2 = d1.date()
     decimal = Decimal('3.1459')
-    binary = requests.get('https://picsum.photos/1').content
+    binary = requests.get('https://cataas.com/cat').content
 
     data = RestResponse.parse({
         'datetime': d1,
