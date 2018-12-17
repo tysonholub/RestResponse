@@ -1,4 +1,4 @@
-# RestResponse [![CircleCI](https://circleci.com/gh/tysonholub/RestResponse.svg?style=svg)](https://circleci.com/gh/tysonholub/RestResponse) ![alt text](https://img.shields.io/badge/python-2.7%20%7C%203.4%20%7C%203.5%20%7C%203.6%20%7C%203.7-239922.svg)
+# RestResponse [![CircleCI](https://circleci.com/gh/tysonholub/RestResponse.svg?style=shield)](https://circleci.com/gh/tysonholub/RestResponse) ![alt text](https://img.shields.io/badge/python-2.7%20%7C%203.4%20%7C%203.5%20%7C%203.6%20%7C%203.7-44CC11.svg)
 
 RestResponse aims to be a fluent python object for interfacing with RESTful JSON APIs
 
