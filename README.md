@@ -147,6 +147,10 @@ None
 False
 >>> isinstance(data.property.is_none, RestResponse.NoneProp)
 True
+>>> 'some data' in data.property.is_none
+False
+>>> [x for x in data.property.is_none]
+[]
 >>> data.property.is_none = None
 >>> isinstance(data.property.is_none, RestResponse.NoneProp)
 False

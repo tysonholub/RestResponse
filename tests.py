@@ -13,6 +13,10 @@ def test_none_prop():
     assert not obj.missing_prop
     assert not obj.missing_prop_call()
     assert isinstance(obj.prop, RestResponse.NoneProp)
+    assert 'test' not in obj.missing_prop
+    assert [x for x in obj.missing_prop] == []
+    for none in obj.missing_prop:
+        raise AssertionError('NoneProp should have nothing to yield')
 
 
 def test_rest_obj():

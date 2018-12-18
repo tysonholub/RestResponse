@@ -134,6 +134,13 @@ class NoneProp(object):
     def __call__(self):
         return None
 
+    def __iter__(self):
+        for i in []:
+            yield i
+
+    def __contains__(self, key):
+        return False
+
     def __setattr__(self, name, value):
         if name == '__parent__' or name == '__prop__':
             super(NoneProp, self).__setattr__(name, value)
