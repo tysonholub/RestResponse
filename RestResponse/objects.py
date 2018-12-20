@@ -141,6 +141,9 @@ class NoneProp(object):
     def __contains__(self, key):
         return False
 
+    def __unicode__(self):
+        return u'None'
+
     def __setattr__(self, name, value):
         if name == '__parent__' or name == '__prop__':
             super(NoneProp, self).__setattr__(name, value)
@@ -207,10 +210,11 @@ class RestList(RestResponseObj, list):
                 yield item
 
     def append(self, item):
-        if callable(item):
-            item = utils.encode_callable(item)
-        elif isinstance(item, str) and not utils.istext(item) or utils.PYTHON3 and isinstance(item, bytes):
-            item = utils.encode_binary(item)
+        if not (isinstance(item, RestResponseObj) or isinstance(item, NoneProp)):
+            if callable(item):
+                item = utils.encode_callable(item)
+            elif isinstance(item, str) and not utils.istext(item) or utils.PYTHON3 and isinstance(item, bytes):
+                item = utils.encode_binary(item)
         super(RestList, self).append(RestResponse.parse(item, parent=self))
         self.changed()
 
@@ -219,10 +223,11 @@ class RestList(RestResponseObj, list):
             self.append(item)
 
     def insert(self, index, item):
-        if str(item).startswith('__callable__: '):
-            item = utils.decode_callable(item)
-        elif str(item).startswith('__binary__: '):
-            item = utils.decode_binary(item)
+        if not (isinstance(item, RestResponseObj) or isinstance(item, NoneProp)):
+            if callable(item):
+                item = utils.encode_callable(item)
+            elif isinstance(item, str) and not utils.istext(item) or utils.PYTHON3 and isinstance(item, bytes):
+                item = utils.encode_binary(item)
         super(RestList, self).insert(index, RestResponse.parse(item, parent=self))
         self.changed()
 

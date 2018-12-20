@@ -34,6 +34,20 @@ def test_rest_obj():
     assert 'prop' in obj.nested
     assert 'prop' in obj.nested.keys()
     assert 'prop' in dir(obj.nested)
+    obj.update(RestResponse.parse({
+        'test': 'this',
+        'callable': lambda x: x+1,
+        'binary': requests.get('https://cataas.com/cat').content
+    }))
+    assert obj.test == 'this'
+    assert obj.callable(1) == 2
+    assert not RestResponse.utils.istext(obj.binary)
+    obj.restobj = RestResponse.parse({
+        'test': 'this',
+        'callable': lambda x: x+1
+    })
+    assert obj.restobj.test == 'this'
+    assert obj.restobj.callable(1) == 2
 
 
 def test_rest_list():
@@ -44,6 +58,25 @@ def test_rest_list():
     assert len(lst) == 1
     assert lst.pop() == 'item'
     assert len(lst) == 0
+    lst.append(RestResponse.parse({
+        'test': 'RestObj',
+        'callable': lambda x: x+1,
+        'binary': requests.get('https://cataas.com/cat').content
+    }))
+    assert lst[-1].test == 'RestObj'
+    assert lst[-1].callable(1) == 2
+    assert not RestResponse.utils.istext(lst[-1].binary)
+    lst.append(RestResponse.parse([lst[-1]]))
+    assert isinstance(lst[-1], RestResponse.RestList)
+    assert isinstance(lst[-1][-1], RestResponse.RestObject)
+    lst.insert(0, RestResponse.parse({
+        'test': 'RestObj',
+        'callable': lambda x: x+1,
+        'binary': requests.get('https://cataas.com/cat').content
+    }))
+    assert lst[0].test == 'RestObj'
+    assert lst[0].callable(1) == 2
+    assert not RestResponse.utils.istext(lst[0].binary)
 
 
 def test_pretty_print():
