@@ -16,7 +16,9 @@ class RestEncoder(utils.CustomObjectEncoder):
     def _walk_dict(self, obj):
         result = {}
         for k, v in six.iteritems(obj):
-            if isinstance(v, dict):
+            if isinstance(v, NoneProp):
+                result[k] = None
+            elif isinstance(v, dict):
                 result[k] = self._walk_dict(v)
             elif isinstance(v, list):
                 result[k] = self._recurse_list(v)
@@ -29,8 +31,6 @@ class RestEncoder(utils.CustomObjectEncoder):
             elif callable(v):
                 result[k] = utils.encode_callable(v)
             else:
-                if isinstance(v, NoneProp):
-                    v = None
                 result[k] = v
 
         return result
@@ -38,7 +38,9 @@ class RestEncoder(utils.CustomObjectEncoder):
     def _recurse_list(self, obj):
         result = []
         for item in obj:
-            if isinstance(item, list):
+            if isinstance(item, NoneProp):
+                result.append(None)
+            elif isinstance(item, list):
                 result.append(self._recurse_list(item))
             elif isinstance(item, dict):
                 result.append(self._walk_dict(item))
@@ -51,8 +53,6 @@ class RestEncoder(utils.CustomObjectEncoder):
             elif callable(item):
                 result.append(utils.encode_callable(item))
             else:
-                if isinstance(item, NoneProp):
-                    item = None
                 result.append(item)
 
         return result
@@ -392,7 +392,9 @@ class RestResponse(object):
 
     @staticmethod
     def parse(data, parent=None):
-        if isinstance(data, dict):
+        if isinstance(data, RestResponseObj) or isinstance(data, NoneProp):
+            return data
+        elif isinstance(data, dict):
             return RestObject(data, parent=parent)
         elif isinstance(data, list):
             return RestList(data, parent=parent)

@@ -48,6 +48,8 @@ def test_rest_obj():
     })
     assert obj.restobj.test == 'this'
     assert obj.restobj.callable(1) == 2
+    obj.none_prop = obj.missing_prop
+    assert obj().get('none_prop') is None
 
 
 def test_rest_list():
@@ -77,6 +79,8 @@ def test_rest_list():
     assert lst[0].test == 'RestObj'
     assert lst[0].callable(1) == 2
     assert not RestResponse.utils.istext(lst[0].binary)
+    lst.append(lst[0].none_prop)
+    assert lst()[-1] is None
 
 
 def test_pretty_print():
