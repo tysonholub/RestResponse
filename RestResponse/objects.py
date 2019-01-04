@@ -26,7 +26,12 @@ class RestEncoder(utils.CustomObjectEncoder):
                 result[k] = float(v)
             elif isinstance(v, datetime) or isinstance(v, date):
                 result[k] = v.isoformat()
-            elif isinstance(v, str) and not utils.istext(v) or utils.PYTHON3 and isinstance(v, bytes):
+            elif not utils.PYTHON3 and isinstance(v, unicode):
+                result[k] = utils.encode_unicode(v)
+            elif (
+                not utils.PYTHON3 and isinstance(v, str) and not utils.istext(v)
+                or utils.PYTHON3 and isinstance(v, bytes)
+            ):
                 result[k] = utils.encode_binary(v)
             elif callable(v):
                 result[k] = utils.encode_callable(v)
@@ -48,7 +53,12 @@ class RestEncoder(utils.CustomObjectEncoder):
                 result.append(float(item))
             elif isinstance(item, datetime) or isinstance(item, date):
                 result.append(item.isoformat())
-            elif isinstance(item, str) and not utils.istext(item) or utils.PYTHON3 and isinstance(item, bytes):
+            elif not utils.PYTHON3 and isinstance(item, unicode):
+                result.append(utils.encode_unicode(item))
+            elif (
+                not utils.PYTHON3 and isinstance(item, str) and not utils.istext(item)
+                or utils.PYTHON3 and isinstance(item, bytes)
+            ):
                 result.append(utils.encode_binary(item))
             elif callable(item):
                 result.append(utils.encode_callable(item))
@@ -68,7 +78,12 @@ class RestEncoder(utils.CustomObjectEncoder):
             return float(obj)
         elif isinstance(obj, datetime) or isinstance(obj, date):
             return obj.isoformat()
-        elif isinstance(obj, str) and not utils.istext(obj) or utils.PYTHON3 and isinstance(obj, bytes):
+        elif not utils.PYTHON3 and isinstance(obj, unicode):
+            return utils.encode_unicode(obj)
+        elif (
+            not utils.PYTHON3 and isinstance(obj, str) and not utils.istext(obj)
+            or utils.PYTHON3 and isinstance(obj, bytes)
+        ):
             return utils.encode_binary(obj)
         elif callable(obj):
             return utils.encode_callable(obj)
@@ -198,6 +213,8 @@ class RestList(RestResponseObj, list):
             item = utils.decode_callable(item)
         elif str(item).startswith('__binary__: '):
             item = utils.decode_binary(item)
+        elif str(item).startswith('__unicode__: '):
+            item = utils.decode_unicode(item)
         return item
 
     def __iter__(self):
@@ -206,6 +223,8 @@ class RestList(RestResponseObj, list):
                 yield utils.decode_callable(item)
             elif str(item).startswith('__binary__: '):
                 yield utils.decode_binary(item)
+            elif str(item).startswith('__unicode__: '):
+                yield utils.decode_unicode(item)
             else:
                 yield item
 
@@ -213,7 +232,12 @@ class RestList(RestResponseObj, list):
         if not (isinstance(item, RestResponseObj) or isinstance(item, NoneProp)):
             if callable(item):
                 item = utils.encode_callable(item)
-            elif isinstance(item, str) and not utils.istext(item) or utils.PYTHON3 and isinstance(item, bytes):
+            elif not utils.PYTHON3 and isinstance(item, unicode):
+                item = utils.encode_unicode(item)
+            elif (
+                not utils.PYTHON3 and isinstance(item, str) and not utils.istext(item)
+                or utils.PYTHON3 and isinstance(item, bytes)
+            ):
                 item = utils.encode_binary(item)
         super(RestList, self).append(RestResponse.parse(item, parent=self))
         self.changed()
@@ -226,13 +250,27 @@ class RestList(RestResponseObj, list):
         if not (isinstance(item, RestResponseObj) or isinstance(item, NoneProp)):
             if callable(item):
                 item = utils.encode_callable(item)
-            elif isinstance(item, str) and not utils.istext(item) or utils.PYTHON3 and isinstance(item, bytes):
+            elif not utils.PYTHON3 and isinstance(item, unicode):
+                item = utils.encode_unicode(item)
+            elif (
+                not utils.PYTHON3 and isinstance(item, str) and not utils.istext(item)
+                or utils.PYTHON3 and isinstance(item, bytes)
+            ):
                 item = utils.encode_binary(item)
         super(RestList, self).insert(index, RestResponse.parse(item, parent=self))
         self.changed()
 
-    def pop(self):
-        value = super(RestList, self).pop()
+    def pop(self, index=None):
+        if index:
+            value = super(RestList, self).pop(index)
+        else:
+            value = super(RestList, self).pop()
+        if str(value).startswith('__callable__: '):
+            value = utils.decode_callable(value)
+        elif str(value).startswith('__binary__: '):
+            value = utils.decode_binary(value)
+        elif str(value).startswith('__unicode__: '):
+            value = utils.decode_unicode(value)
         self.changed()
         return value
 
@@ -366,15 +404,19 @@ class RestObject(RestResponseObj, dict):
 
     def _init_data(self, v):
         if isinstance(v, dict) and not isinstance(v, RestObject):
-            v = RestObject(v, parent=self)
+            return RestObject(v, parent=self)
         elif isinstance(v, list) and not isinstance(v, RestList):
-            v = RestList(v, parent=self)
+            return RestList(v, parent=self)
         elif isinstance(v, Decimal):
-            v = float(v)
-        elif isinstance(str(v), str) and str(v).startswith('__callable__: '):
-            v = utils.decode_callable(str(v))
-        elif isinstance(str(v), str) and str(v).startswith('__binary__: '):
-            v = utils.decode_binary(str(v))
+            return float(v)
+        elif not utils.PYTHON3 and isinstance(v, unicode) and v.startswith('__unicode__: '):
+            return utils.decode_unicode(v)
+        elif isinstance(v, str) and v.startswith('__unicode__: '):
+            return utils.decode_unicode(v)
+        elif isinstance(v, str) and v.startswith('__callable__: '):
+            return utils.decode_callable(v)
+        elif isinstance(v, str) and v.startswith('__binary__: '):
+            return utils.decode_binary(v)
         return v
 
     def _update_object(self, data):
@@ -385,7 +427,7 @@ class RestObject(RestResponseObj, dict):
 
 class RestResponse(object):
     def __new__(self, data):
-        if isinstance(data, str) or isinstance(data, unicode):
+        if isinstance(data, str) or not utils.PYTHON3 and isinstance(data, unicode):
             return RestResponse.loads(data)
         else:
             return RestResponse.parse(data)
@@ -402,7 +444,12 @@ class RestResponse(object):
             return RestObject({}, parent=parent)
         elif isinstance(data, Decimal):
             return float(data)
-        elif isinstance(data, str) and not utils.istext(data) or utils.PYTHON3 and isinstance(data, bytes):
+        elif not utils.PYTHON3 and isinstance(data, unicode):
+            return utils.encode_unicode(data)
+        elif (
+            not utils.PYTHON3 and isinstance(data, str) and not utils.istext(data)
+            or utils.PYTHON3 and isinstance(data, bytes)
+        ):
             return utils.encode_binary(data)
         elif callable(data):
             return utils.encode_callable(data)

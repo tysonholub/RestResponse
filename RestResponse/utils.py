@@ -23,12 +23,23 @@ def decode_binary(value):
         return base64.b64decode(value.replace('__binary__: ', ''))
 
 
+def decode_unicode(value):
+    try:
+        return value.replace('__unicode__: ', '').decode('utf-8')
+    except (UnicodeEncodeError, AttributeError):
+        return value.replace('__unicode__: ', '')
+
+
 def encode_callable(obj):
     return '__callable__: %s' % base64.b64encode(pickle.dumps(obj))
 
 
 def encode_binary(obj):
     return '__binary__: %s' % base64.b64encode(obj)
+
+
+def encode_unicode(obj):
+    return '__unicode__: %s' % obj.encode('utf-8')
 
 
 def istext(s, text_characters="".join(map(chr, range(32, 127))) + "\n\r\t\b", threshold=0.30):

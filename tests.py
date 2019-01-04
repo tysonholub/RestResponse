@@ -59,14 +59,18 @@ def test_rest_list():
     assert 'item' in lst
     assert len(lst) == 1
     assert lst.pop() == 'item'
+    lst.append(u'\U0001f44d')
+    assert lst.pop(0) == u'\U0001f44d'
     assert len(lst) == 0
     lst.append(RestResponse.parse({
         'test': 'RestObj',
         'callable': lambda x: x+1,
-        'binary': requests.get('https://cataas.com/cat').content
+        'binary': requests.get('https://cataas.com/cat').content,
+        'unicode': u'\U0001f44d'
     }))
     assert lst[-1].test == 'RestObj'
     assert lst[-1].callable(1) == 2
+    assert lst[-1].unicode == u'\U0001f44d'
     assert not RestResponse.utils.istext(lst[-1].binary)
     lst.append(RestResponse.parse([lst[-1]]))
     assert isinstance(lst[-1], RestResponse.RestList)
@@ -74,10 +78,12 @@ def test_rest_list():
     lst.insert(0, RestResponse.parse({
         'test': 'RestObj',
         'callable': lambda x: x+1,
-        'binary': requests.get('https://cataas.com/cat').content
+        'binary': requests.get('https://cataas.com/cat').content,
+        'unicode': u'\U0001f44d'
     }))
     assert lst[0].test == 'RestObj'
     assert lst[0].callable(1) == 2
+    assert lst[0].unicode == u'\U0001f44d'
     assert not RestResponse.utils.istext(lst[0].binary)
     lst.append(lst[0].none_prop)
     assert lst()[-1] is None
@@ -125,7 +131,8 @@ def test_supported_encoder_types():
         'date': d2,
         'decimal': decimal,
         'binary': binary,
-        'callable': lambda x: x + 1
+        'callable': lambda x: x + 1,
+        'unicode': u'\U0001f44d'
     })
 
     assert data.datetime == d1
@@ -133,6 +140,7 @@ def test_supported_encoder_types():
     assert data.decimal == float(Decimal('3.1459'))
     assert data.binary == binary
     assert data.callable(1) == 2
+    assert data.unicode == u'\U0001f44d'
 
     raw = json.loads(repr(data))
     assert raw['binary'].startswith('__binary__: ')
