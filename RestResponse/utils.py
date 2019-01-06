@@ -39,7 +39,10 @@ def encode_binary(obj):
 
 
 def encode_unicode(obj):
-    return '__unicode__: %s' % obj.encode('utf-8')
+    try:
+        return str(obj)
+    except UnicodeEncodeError:
+        return '__unicode__: %s' % obj.encode('utf-8')
 
 
 def istext(s, text_characters="".join(map(chr, range(32, 127))) + "\n\r\t\b", threshold=0.30):

@@ -132,7 +132,8 @@ def test_supported_encoder_types():
         'decimal': decimal,
         'binary': binary,
         'callable': lambda x: x + 1,
-        'unicode': u'\U0001f44d'
+        'unicode': u'\U0001f44d',
+        'ascii_unicode': u'test'
     })
 
     assert data.datetime == d1
@@ -141,6 +142,7 @@ def test_supported_encoder_types():
     assert data.binary == binary
     assert data.callable(1) == 2
     assert data.unicode == u'\U0001f44d'
+    assert data.ascii_unicode == u'test'
 
     raw = json.loads(repr(data))
     assert raw['binary'].startswith('__binary__: ')
@@ -149,10 +151,13 @@ def test_supported_encoder_types():
     else:
         assert base64.b64decode(raw['binary'].replace('__binary__: b', '')) == binary
     assert raw['callable'].startswith('__callable__: ')
-    if sys.version_info[0] < 3:
+    if not RestResponse.utils.PYTHON3:
         assert pickle.loads(base64.b64decode(raw['callable'].replace('__callable__: ', ''))).func_code == \
             data.callable.func_code
         assert pickle.loads(base64.b64decode(raw['callable'].replace('__callable__: ', '')))(1) == 2
+        assert raw['unicode'].startswith('__unicode__: ')
+        assert not raw['ascii_unicode'].startswith('__unicode__: ')
+        assert raw['ascii_unicode'] == 'test'
     else:
         assert pickle.loads(base64.b64decode(raw['callable'].replace('__callable__: b', ''))).__code__ == \
             data.callable.__code__
