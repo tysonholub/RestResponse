@@ -50,6 +50,16 @@ def test_rest_obj():
     assert obj.restobj.callable(1) == 2
     obj.none_prop = obj.missing_prop
     assert obj().get('none_prop') is None
+    assert obj['test'] == 'this'
+    exc = None
+    try:
+        obj['missing_key']
+    except Exception as e:
+        exc = e
+    assert isinstance(exc, KeyError)
+    obj['key'] = obj.restobj
+    assert obj['key'].test == 'this' == obj.key.test == obj['key']['test']
+    assert obj['key'].callable(1) == 2
 
 
 def test_rest_list():
