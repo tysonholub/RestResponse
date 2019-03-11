@@ -1,8 +1,6 @@
 import json
 import simplejson
 import six
-from decimal import Decimal
-from datetime import datetime, date
 from sqlalchemy.ext.mutable import Mutable
 from RestResponse import utils
 
@@ -22,49 +20,21 @@ class RestEncoder(utils.CustomObjectEncoder):
                 result[k] = self._walk_dict(v)
             elif isinstance(v, list):
                 result[k] = self._recurse_list(v)
-            elif isinstance(v, Decimal):
-                result[k] = float(v)
-            elif isinstance(v, datetime) or isinstance(v, date):
-                result[k] = v.isoformat()
-            elif not utils.PYTHON3 and isinstance(v, unicode):
-                result[k] = utils.encode_unicode(v)
-            elif (
-                not utils.PYTHON3 and isinstance(v, str) and not utils.istext(v)
-                or utils.PYTHON3 and isinstance(v, bytes)
-            ):
-                result[k] = utils.encode_binary(v)
-            elif callable(v):
-                result[k] = utils.encode_callable(v)
             else:
-                result[k] = v
-
+                result[k] = utils.encode_item(v)
         return result
 
     def _recurse_list(self, obj):
         result = []
         for item in obj:
-            if isinstance(item, NoneProp):
+            if isinstance(item, NoneProp) or item is None:
                 result.append(None)
             elif isinstance(item, list):
                 result.append(self._recurse_list(item))
             elif isinstance(item, dict):
                 result.append(self._walk_dict(item))
-            elif isinstance(item, Decimal):
-                result.append(float(item))
-            elif isinstance(item, datetime) or isinstance(item, date):
-                result.append(item.isoformat())
-            elif not utils.PYTHON3 and isinstance(item, unicode):
-                result.append(utils.encode_unicode(item))
-            elif (
-                not utils.PYTHON3 and isinstance(item, str) and not utils.istext(item)
-                or utils.PYTHON3 and isinstance(item, bytes)
-            ):
-                result.append(utils.encode_binary(item))
-            elif callable(item):
-                result.append(utils.encode_callable(item))
             else:
-                result.append(item)
-
+                result.append(utils.encode_item(item))
         return result
 
     def default(self, obj):
@@ -72,23 +42,10 @@ class RestEncoder(utils.CustomObjectEncoder):
             return self._recurse_list(obj)
         elif isinstance(obj, dict):
             return self._walk_dict(obj)
-        elif isinstance(obj, NoneProp):
+        elif isinstance(obj, NoneProp) or obj is None:
             return None
-        elif isinstance(obj, Decimal):
-            return float(obj)
-        elif isinstance(obj, datetime) or isinstance(obj, date):
-            return obj.isoformat()
-        elif not utils.PYTHON3 and isinstance(obj, unicode):
-            return utils.encode_unicode(obj)
-        elif (
-            not utils.PYTHON3 and isinstance(obj, str) and not utils.istext(obj)
-            or utils.PYTHON3 and isinstance(obj, bytes)
-        ):
-            return utils.encode_binary(obj)
-        elif callable(obj):
-            return utils.encode_callable(obj)
         else:
-            return None
+            return utils.encode_item(obj)
 
 
 json._default_encoder = RestEncoder()
@@ -209,36 +166,20 @@ class RestList(RestResponseObj, list):
 
     def __getitem__(self, index):
         item = super(RestList, self).__getitem__(index)
-        if str(item).startswith('__callable__: '):
-            item = utils.decode_callable(item)
-        elif str(item).startswith('__binary__: '):
-            item = utils.decode_binary(item)
-        elif str(item).startswith('__unicode__: '):
-            item = utils.decode_unicode(item)
-        return item
+        return utils.decode_item(item)
+
+    def __contains__(self, item):
+        if not (isinstance(item, RestResponseObj) or isinstance(item, NoneProp)):
+            item = utils.encode_item(item)
+        return super(RestList, self).__contains__(item)
 
     def __iter__(self):
         for item in list.__iter__(self):
-            if str(item).startswith('__callable__: '):
-                yield utils.decode_callable(item)
-            elif str(item).startswith('__binary__: '):
-                yield utils.decode_binary(item)
-            elif str(item).startswith('__unicode__: '):
-                yield utils.decode_unicode(item)
-            else:
-                yield item
+            yield utils.decode_item(item)
 
     def append(self, item):
         if not (isinstance(item, RestResponseObj) or isinstance(item, NoneProp)):
-            if callable(item):
-                item = utils.encode_callable(item)
-            elif not utils.PYTHON3 and isinstance(item, unicode):
-                item = utils.encode_unicode(item)
-            elif (
-                not utils.PYTHON3 and isinstance(item, str) and not utils.istext(item)
-                or utils.PYTHON3 and isinstance(item, bytes)
-            ):
-                item = utils.encode_binary(item)
+            utils.encode_item(item)
         super(RestList, self).append(RestResponse.parse(item, parent=self))
         self.changed()
 
@@ -248,15 +189,7 @@ class RestList(RestResponseObj, list):
 
     def insert(self, index, item):
         if not (isinstance(item, RestResponseObj) or isinstance(item, NoneProp)):
-            if callable(item):
-                item = utils.encode_callable(item)
-            elif not utils.PYTHON3 and isinstance(item, unicode):
-                item = utils.encode_unicode(item)
-            elif (
-                not utils.PYTHON3 and isinstance(item, str) and not utils.istext(item)
-                or utils.PYTHON3 and isinstance(item, bytes)
-            ):
-                item = utils.encode_binary(item)
+            utils.encode_item(item)
         super(RestList, self).insert(index, RestResponse.parse(item, parent=self))
         self.changed()
 
@@ -265,14 +198,8 @@ class RestList(RestResponseObj, list):
             value = super(RestList, self).pop(index)
         else:
             value = super(RestList, self).pop()
-        if str(value).startswith('__callable__: '):
-            value = utils.decode_callable(value)
-        elif str(value).startswith('__binary__: '):
-            value = utils.decode_binary(value)
-        elif str(value).startswith('__unicode__: '):
-            value = utils.decode_unicode(value)
         self.changed()
-        return value
+        return utils.decode_item(value)
 
     def remove(self, item):
         super(RestList, self).remove(item)
@@ -413,17 +340,8 @@ class RestObject(RestResponseObj, dict):
             return RestObject(v, parent=self)
         elif isinstance(v, list) and not isinstance(v, RestList):
             return RestList(v, parent=self)
-        elif isinstance(v, Decimal):
-            return float(v)
-        elif not utils.PYTHON3 and isinstance(v, unicode) and v.startswith('__unicode__: '):
-            return utils.decode_unicode(v)
-        elif isinstance(v, str) and v.startswith('__unicode__: '):
-            return utils.decode_unicode(v)
-        elif isinstance(v, str) and v.startswith('__callable__: '):
-            return utils.decode_callable(v)
-        elif isinstance(v, str) and v.startswith('__binary__: '):
-            return utils.decode_binary(v)
-        return v
+        else:
+            return utils.decode_item(v)
 
     def _update_object(self, data):
         for k, v in six.iteritems(data):
@@ -448,19 +366,8 @@ class RestResponse(object):
             return RestList(data, parent=parent)
         elif isinstance(data, type(None)):
             return RestObject({}, parent=parent)
-        elif isinstance(data, Decimal):
-            return float(data)
-        elif not utils.PYTHON3 and isinstance(data, unicode):
-            return utils.encode_unicode(data)
-        elif (
-            not utils.PYTHON3 and isinstance(data, str) and not utils.istext(data)
-            or utils.PYTHON3 and isinstance(data, bytes)
-        ):
-            return utils.encode_binary(data)
-        elif callable(data):
-            return utils.encode_callable(data)
         else:
-            return data
+            return utils.encode_item(data)
 
     @staticmethod
     def loads(data):

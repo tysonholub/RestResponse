@@ -1,12 +1,15 @@
 import sys
 import string
 import base64
+from decimal import Decimal
+from datetime import datetime, date
 import cloudpickle as pickle
 from json.encoder import (
     _make_iterencode, JSONEncoder, encode_basestring_ascii, INFINITY, encode_basestring
 )
 
 PYTHON3 = sys.version_info[0] > 2
+PYTHON34 = PYTHON3 and sys.version_info[1] >= 4
 
 
 def decode_callable(value):
@@ -23,26 +26,12 @@ def decode_binary(value):
         return base64.b64decode(value.replace('__binary__: ', ''))
 
 
-def decode_unicode(value):
-    try:
-        return value.replace('__unicode__: ', '').decode('utf-8')
-    except (UnicodeEncodeError, AttributeError):
-        return value.replace('__unicode__: ', '')
-
-
 def encode_callable(obj):
     return '__callable__: %s' % base64.b64encode(pickle.dumps(obj))
 
 
 def encode_binary(obj):
     return '__binary__: %s' % base64.b64encode(obj)
-
-
-def encode_unicode(obj):
-    try:
-        return str(obj)
-    except UnicodeEncodeError:
-        return '__unicode__: %s' % obj.encode('utf-8')
 
 
 def istext(s, text_characters="".join(map(chr, range(32, 127))) + "\n\r\t\b", threshold=0.30):
@@ -53,7 +42,10 @@ def istext(s, text_characters="".join(map(chr, range(32, 127))) + "\n\r\t\b", th
     """
     if PYTHON3:
         if isinstance(s, bytes):
-            return False
+            try:
+                s = s.decode('utf-8')
+            except UnicodeDecodeError:
+                return False
 
     if '\0' in s:
         return False
@@ -67,6 +59,45 @@ def istext(s, text_characters="".join(map(chr, range(32, 127))) + "\n\r\t\b", th
 
     # s is 'text' if less than 30% of its characters are non-text ones:
     return len(t)/len(s) <= threshold
+
+
+def encode_item(item):
+    if isinstance(item, Decimal):
+        return float(item)
+    elif isinstance(item, datetime) or isinstance(item, date):
+        return item.isoformat()
+    elif callable(item):
+        return encode_callable(item)
+    elif (
+        not PYTHON3 and isinstance(item, str) and not istext(item)
+        or PYTHON3 and isinstance(item, bytes) and not istext(item)
+    ):
+        return encode_binary(item)
+    elif (
+        not PYTHON3 and isinstance(item, unicode)
+        or PYTHON3 and isinstance(item, str)
+    ):
+        return item.encode('utf-8')
+    elif PYTHON3 and isinstance(item, bytes) and istext(item):
+        return item.decode('utf-8')
+    return item
+
+
+def decode_item(item):
+    if isinstance(item, Decimal):
+        return float(item)
+    elif isinstance(item, str) and item.startswith('__callable__: '):
+        return decode_callable(item)
+    elif isinstance(item, str) and item.startswith('__binary__: '):
+        return decode_binary(item)
+    try:
+        if PYTHON3 and isinstance(item, bytes):
+            return item.decode('utf-8')
+        elif not PYTHON3 and isinstance(item, str):
+            return item.decode('utf-8')
+    except UnicodeDecodeError:
+        pass
+    return item
 
 
 class CustomObjectEncoder(JSONEncoder):

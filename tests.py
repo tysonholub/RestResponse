@@ -72,15 +72,23 @@ def test_rest_list():
     lst.append(u'\U0001f44d')
     assert lst.pop(0) == u'\U0001f44d'
     assert len(lst) == 0
+    lst.insert(0, u'\U0001f44d')
+    lst.append(b'byte string')
+    assert u'\U0001f44d' in lst
+    assert b'byte string' in lst
+    assert lst.pop() == 'byte string'
+    assert lst.pop() == u'\U0001f44d'
     lst.append(RestResponse.parse({
         'test': 'RestObj',
         'callable': lambda x: x+1,
         'binary': requests.get('https://cataas.com/cat').content,
-        'unicode': u'\U0001f44d'
+        'unicode': u'\U0001f44d',
+        'bytes': b'byte string'
     }))
     assert lst[-1].test == 'RestObj'
     assert lst[-1].callable(1) == 2
     assert lst[-1].unicode == u'\U0001f44d'
+    assert lst[-1].bytes == 'byte string'
     assert not RestResponse.utils.istext(lst[-1].binary)
     lst.append(RestResponse.parse([lst[-1]]))
     assert isinstance(lst[-1], RestResponse.RestList)
@@ -112,7 +120,8 @@ def test_encode_on_request():
         'name': 'Test New Name',
         'new_field': 'Test New Field',
         'binary': requests.get('https://cataas.com/cat').content,
-        'callable': lambda x: x + 1
+        'callable': lambda x: x + 1,
+        'unicode': u'\U0001f44d'
     })
     r = requests.put('http://jsonplaceholder.typicode.com/users/{0}'.format(user.id), json=user)
     assert r.ok
@@ -124,6 +133,10 @@ def test_encode_on_request():
     user = RestResponse.loads(r.text)
     assert user.name == 'Test New Name'
     assert user.new_field == 'Test New Field'
+    if RestResponse.utils.PYTHON34:
+        assert user.unicode == u'\U0001f44d'.encode('utf-8')
+    else:
+        assert user.unicode == u'\U0001f44d'
     for key in user:
         assert key in user.keys()
     user.clear()
@@ -165,8 +178,6 @@ def test_supported_encoder_types():
         assert pickle.loads(base64.b64decode(raw['callable'].replace('__callable__: ', ''))).func_code == \
             data.callable.func_code
         assert pickle.loads(base64.b64decode(raw['callable'].replace('__callable__: ', '')))(1) == 2
-        assert raw['unicode'].startswith('__unicode__: ')
-        assert not raw['ascii_unicode'].startswith('__unicode__: ')
         assert raw['ascii_unicode'] == 'test'
     else:
         assert pickle.loads(base64.b64decode(raw['callable'].replace('__callable__: b', ''))).__code__ == \
