@@ -12,6 +12,8 @@ def test_none_prop():
     obj = RestResponse.parse({})
     assert not obj.missing_prop
     assert not obj.missing_prop_call()
+    obj.none_prop['test'] = 'this'
+    assert obj.none_prop.test == 'this'
     assert isinstance(obj.prop, RestResponse.NoneProp)
     assert 'test' not in obj.missing_prop
     assert [x for x in obj.missing_prop] == []

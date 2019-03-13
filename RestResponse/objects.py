@@ -143,6 +143,12 @@ class NoneProp(object):
     def __getattr__(self, name):
         return NoneProp(self, name)
 
+    def __getitem__(self, name):
+        return self.__getattr__(name)
+
+    def __setitem__(self, name, value):
+        self.__setattr__(name, value)
+
 
 class RestList(RestResponseObj, list):
     def __init__(self, data, parent=None):
