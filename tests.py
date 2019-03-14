@@ -64,6 +64,27 @@ def test_rest_obj():
     assert obj['key'].callable(1) == 2
 
 
+def test_callable():
+    base = RestResponse.parse({
+        'trigger': lambda x: x+1
+    })
+    t = RestResponse.parse(base())
+    assert t.trigger(1) == 2
+    t = RestResponse.loads(base.pretty_print())
+    assert t.trigger(1) == 2
+
+
+def test_binary():
+    binary = requests.get('https://cataas.com/cat').content
+    base = RestResponse.parse({
+        'binary': binary
+    })
+    t = RestResponse.parse(base())
+    assert t.binary == binary
+    t = RestResponse.loads(base.pretty_print())
+    assert t.binary == binary
+
+
 def test_rest_list():
     lst = RestResponse.parse([])
     assert isinstance(lst, RestResponse.RestList)
@@ -171,17 +192,14 @@ def test_supported_encoder_types():
 
     raw = json.loads(repr(data))
     assert raw['binary'].startswith('__binary__: ')
-    if sys.version_info[0] < 3:
-        assert base64.b64decode(raw['binary'].replace('__binary__: ', '')) == binary
-    else:
-        assert base64.b64decode(raw['binary'].replace('__binary__: b', '')) == binary
+    assert base64.b64decode(raw['binary'].replace('__binary__: ', '')) == binary
     assert raw['callable'].startswith('__callable__: ')
+
     if not RestResponse.utils.PYTHON3:
         assert pickle.loads(base64.b64decode(raw['callable'].replace('__callable__: ', ''))).func_code == \
             data.callable.func_code
-        assert pickle.loads(base64.b64decode(raw['callable'].replace('__callable__: ', '')))(1) == 2
-        assert raw['ascii_unicode'] == 'test'
     else:
-        assert pickle.loads(base64.b64decode(raw['callable'].replace('__callable__: b', ''))).__code__ == \
+        assert pickle.loads(base64.b64decode(raw['callable'].replace('__callable__: ', ''))).__code__ == \
             data.callable.__code__
-        assert pickle.loads(base64.b64decode(raw['callable'].replace('__callable__: b', '')))(1) == 2
+    assert pickle.loads(base64.b64decode(raw['callable'].replace('__callable__: ', '')))(1) == 2
+    assert raw['ascii_unicode'] == 'test'

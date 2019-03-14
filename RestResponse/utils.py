@@ -13,25 +13,25 @@ PYTHON34 = PYTHON3 and sys.version_info[1] >= 4
 
 
 def decode_callable(value):
-    if PYTHON3:
-        return pickle.loads(base64.b64decode(value.replace('__callable__: b', '')))
-    else:
-        return pickle.loads(base64.b64decode(value.replace('__callable__: ', '')))
+    return pickle.loads(base64.b64decode(value.replace('__callable__: ', '')))
 
 
 def decode_binary(value):
-    if PYTHON3:
-        return base64.b64decode(value.replace('__binary__: b', ''))
-    else:
-        return base64.b64decode(value.replace('__binary__: ', ''))
+    return base64.b64decode(value.replace('__binary__: ', ''))
 
 
 def encode_callable(obj):
-    return '__callable__: %s' % base64.b64encode(pickle.dumps(obj))
+    if PYTHON3:
+        return '__callable__: %s' % base64.b64encode(pickle.dumps(obj)).decode('utf-8')
+    else:
+        return '__callable__: %s' % base64.b64encode(pickle.dumps(obj))
 
 
 def encode_binary(obj):
-    return '__binary__: %s' % base64.b64encode(obj)
+    if PYTHON3:
+        return '__binary__: %s' % base64.b64encode(obj).decode('utf-8')
+    else:
+        return '__binary__: %s' % base64.b64encode(obj)
 
 
 def istext(s, text_characters="".join(map(chr, range(32, 127))) + "\n\r\t\b", threshold=0.30):
@@ -88,7 +88,15 @@ def decode_item(item):
         return float(item)
     elif isinstance(item, str) and item.startswith('__callable__: '):
         return decode_callable(item)
+    elif PYTHON3 and isinstance(item, bytes) and item.startswith(b'__callable__: '):
+        return decode_callable(item.decode('utf-8'))
+    elif not PYTHON3 and isinstance(item, unicode) and item.startswith('__callable__: '):
+        return decode_callable(item)
     elif isinstance(item, str) and item.startswith('__binary__: '):
+        return decode_binary(item)
+    elif PYTHON3 and isinstance(item, bytes) and item.startswith(b'__binary__: '):
+        return decode_binary(item.decode('utf-8'))
+    elif not PYTHON3 and isinstance(item, unicode) and item.startswith('__binary__: '):
         return decode_binary(item)
     try:
         if PYTHON3 and isinstance(item, bytes):
