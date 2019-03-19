@@ -256,13 +256,10 @@ class RestObject(RestResponseObj, dict):
         else:
             return None
 
-    def popitem(self, name):
-        if name in self.__data__:
-            value = self.__data__.pop(name)
-            self.changed()
-            return (name, value)
-        else:
-            return None
+    def popitem(self):
+        key_value = self.__data__.popitem()
+        self.changed()
+        return key_value
 
     def __iter__(self):
         for x in self.keys():

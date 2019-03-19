@@ -31,6 +31,9 @@ def test_rest_obj():
     assert len(obj) == 1
     assert obj.pop('id') == 1
     assert len(obj) == 0
+    obj.id = 1
+    assert obj.popitem() == ('id', 1)
+    assert len(obj) == 0
     obj.nested.prop = None
     assert isinstance(obj.nested, RestResponse.RestObject)
     assert 'prop' in obj.nested
