@@ -12,22 +12,22 @@ PYTHON3 = sys.version_info[0] > 2
 PYTHON34 = PYTHON3 and sys.version_info[1] >= 4
 
 
-def decode_callable(value):
+def _decode_callable(value):
     return pickle.loads(base64.b64decode(value.replace('__callable__: ', '')))
 
 
-def decode_binary(value):
+def _decode_binary(value):
     return base64.b64decode(value.replace('__binary__: ', ''))
 
 
-def encode_callable(obj):
+def _encode_callable(obj):
     if PYTHON3:
         return '__callable__: %s' % base64.b64encode(pickle.dumps(obj)).decode('utf-8')
     else:
         return '__callable__: %s' % base64.b64encode(pickle.dumps(obj))
 
 
-def encode_binary(obj):
+def _encode_binary(obj):
     if PYTHON3:
         return '__binary__: %s' % base64.b64encode(obj).decode('utf-8')
     else:
@@ -61,18 +61,19 @@ def istext(s, text_characters="".join(map(chr, range(32, 127))) + "\n\r\t\b", th
     return len(t)/len(s) <= threshold
 
 
-def encode_item(item):
+def encode_item(item, encode_binary=True, encode_callable=True, **kwargs):
     if isinstance(item, Decimal):
         return float(item)
     elif isinstance(item, datetime) or isinstance(item, date):
         return item.isoformat()
-    elif callable(item):
-        return encode_callable(item)
+    elif encode_callable and callable(item):
+        return _encode_callable(item)
     elif (
+        encode_binary and
         not PYTHON3 and isinstance(item, str) and not istext(item)
         or PYTHON3 and isinstance(item, bytes) and not istext(item)
     ):
-        return encode_binary(item)
+        return _encode_binary(item)
     elif (
         not PYTHON3 and isinstance(item, unicode)
         or PYTHON3 and isinstance(item, str)
@@ -83,21 +84,21 @@ def encode_item(item):
     return item
 
 
-def decode_item(item):
+def decode_item(item, decode_binary=True, decode_callable=True, **kwargs):
     if isinstance(item, Decimal):
         return float(item)
-    elif isinstance(item, str) and item.startswith('__callable__: '):
-        return decode_callable(item)
-    elif PYTHON3 and isinstance(item, bytes) and item.startswith(b'__callable__: '):
-        return decode_callable(item.decode('utf-8'))
-    elif not PYTHON3 and isinstance(item, unicode) and item.startswith('__callable__: '):
-        return decode_callable(item)
-    elif isinstance(item, str) and item.startswith('__binary__: '):
-        return decode_binary(item)
-    elif PYTHON3 and isinstance(item, bytes) and item.startswith(b'__binary__: '):
-        return decode_binary(item.decode('utf-8'))
-    elif not PYTHON3 and isinstance(item, unicode) and item.startswith('__binary__: '):
-        return decode_binary(item)
+    elif decode_callable and isinstance(item, str) and item.startswith('__callable__: '):
+        return _decode_callable(item)
+    elif decode_callable and PYTHON3 and isinstance(item, bytes) and item.startswith(b'__callable__: '):
+        return _decode_callable(item.decode('utf-8'))
+    elif decode_callable and not PYTHON3 and isinstance(item, unicode) and item.startswith('__callable__: '):
+        return _decode_callable(item)
+    elif decode_binary and isinstance(item, str) and item.startswith('__binary__: '):
+        return _decode_binary(item)
+    elif decode_binary and PYTHON3 and isinstance(item, bytes) and item.startswith(b'__binary__: '):
+        return _decode_binary(item.decode('utf-8'))
+    elif decode_binary and not PYTHON3 and isinstance(item, unicode) and item.startswith('__binary__: '):
+        return _decode_binary(item)
     try:
         if PYTHON3 and isinstance(item, bytes):
             return item.decode('utf-8')

@@ -182,6 +182,106 @@ class SomeModel(db.Model):
 ```
 Data will be saved to the database as a serialized json blob. When data is loaded it will be coerced to the underlying RestResponseObj
 
+## ApiModel
+
+Inherit RestResponse.ApiModel to facilitate typing out API models. Consider the following snippet:
+```python
+from RestResponse import ApiModel
+
+
+class Model(ApiModel):
+    def __init__(self, data):
+        self._data = data
+
+    @property
+    def id(self):
+        '''Gets the id of this Model.
+
+        :return: The id of this Model.
+        :rtype: int
+        '''
+        return int(self._data.id)
+
+    @id.setter
+    def id(self, id):
+        '''Sets the id of this Model.
+
+        :param id: The id of this Model.
+        :type: int
+        '''
+        self._data.id = int(id)
+
+    @property
+    def reference(self):
+        '''Sets the reference of this Model.
+
+        :param reference: The reference of this Model.
+        :type: Reference
+        '''
+        if not self._data.reference:
+            self._data.reference = Reference()
+        return Reference(self._data.reference)
+
+    @reference.setter
+    def reference(self, reference):
+        '''Sets the reference of this Model.
+
+        :param reference: The reference of this Model.
+        :type: Reference
+        '''
+        self._data.reference = Reference(data)
+
+
+class Reference(ApiModel):
+    def __init__(self, data):
+        self._data = data
+
+    @property
+    def id(self):
+        '''Gets the id of this Reference.
+
+        :return: The id of this Reference.
+        :rtype: int
+        '''
+        return int(self._data.id)
+
+    @id.setter
+    def id(self, id):
+        '''Sets the id of this Reference.
+
+        :param id: The id of this Reference.
+        :type: int
+        '''
+        self._data.id = int(id)
+```
+Then initialize with RestObject, dict, ApiModel, or serialized JSON
+```python
+>>> model = Model({
+  'id': 5,
+  'reference': {
+    'id': 1
+  }
+})
+>>> print model._data.pretty_print()
+{
+    "id": 5,
+    "reference": {
+        "id": 1
+    }
+}
+>>> type(model._data)
+<class 'RestResponse.objects.RestObject'>
+```
+Note: ApiModel will NOT decode/encode binary/callable types by default. You'll need to turn this behavior on by overriding `ApiModel.__opts__`:
+```python
+Model.__opts__ = {
+    'encode_binary': True,
+    'encode_callable': True,
+    'decode_binary': True,
+    'decode_callable': True
+}
+```
+
 ## Testing
 
     $ pytest -s tests.py

@@ -1,13 +1,58 @@
 import json
 import simplejson
 import six
+from datetime import datetime
 from sqlalchemy.ext.mutable import Mutable
 from RestResponse import utils
 
 
+class ApiModel(object):
+    __opts__ = {
+        'encode_binary': False,
+        'encode_callable': False,
+        'decode_binary': False,
+        'decode_callable': False
+    }
+
+    @property
+    def _data(self):
+        return self.__data
+
+    @_data.setter
+    def _data(self, data):
+        self.__data = data = data or RestResponse.parse({}, **self.__opts__)
+        if isinstance(data, dict) or isinstance(data, list):
+            self.__data = RestResponse.parse(data, **self.__opts__)
+        elif isinstance(data, str) or not utils.PYTHON3 and isinstance(data, unicode):
+            self.__data = RestResponse.loads(data or "{}", **self.__opts__)
+        elif isinstance(data, ApiModel):
+            self.__data = data._data
+
+    def _to_dict(self):
+        return self._data()
+
+    def _format_datetime(self, d, format='%Y-%m-%dT%H:%M:%SZ'):
+        if not isinstance(d, datetime):
+            try:
+                return datetime.strptime(d, format)
+            except ValueError:
+                return None
+        else:
+            return d
+
+
 class RestEncoder(utils.CustomObjectEncoder):
+    __opts__ = {
+        'encode_binary': True,
+        'encode_callable': True,
+        'decode_binary': True,
+        'decode_callable': True
+    }
+
     def isinstance(self, obj, cls):
         if isinstance(obj, (RestResponseObj, NoneProp)):
+            if isinstance(obj, RestResponseObj):
+                self.__opts__.update(obj.__opts__)
             return False
         return isinstance(obj, cls)
 
@@ -21,7 +66,7 @@ class RestEncoder(utils.CustomObjectEncoder):
             elif isinstance(v, list):
                 result[k] = self._recurse_list(v)
             else:
-                result[k] = utils.encode_item(v)
+                result[k] = utils.encode_item(v, **self.__opts__)
         return result
 
     def _recurse_list(self, obj):
@@ -34,10 +79,12 @@ class RestEncoder(utils.CustomObjectEncoder):
             elif isinstance(item, dict):
                 result.append(self._walk_dict(item))
             else:
-                result.append(utils.encode_item(item))
+                result.append(utils.encode_item(item, **self.__opts__))
         return result
 
     def default(self, obj):
+        if isinstance(obj, ApiModel):
+            return self.default(obj._data)
         if isinstance(obj, list):
             return self._recurse_list(obj)
         elif isinstance(obj, dict):
@@ -45,7 +92,7 @@ class RestEncoder(utils.CustomObjectEncoder):
         elif isinstance(obj, NoneProp) or obj is None:
             return None
         else:
-            return utils.encode_item(obj)
+            return utils.encode_item(obj, **self.__opts__)
 
 
 json._default_encoder = RestEncoder()
@@ -54,6 +101,12 @@ simplejson._default_encoder = RestEncoder()
 
 class RestResponseObj(Mutable, object):
     __parent__ = None
+    __opts__ = {
+        'encode_binary': True,
+        'encode_callable': True,
+        'decode_binary': True,
+        'decode_callable': True
+    }
 
     @classmethod
     def coerce(cls, key, value):
@@ -151,11 +204,12 @@ class NoneProp(object):
 
 
 class RestList(RestResponseObj, list):
-    def __init__(self, data, parent=None):
+    def __init__(self, data, parent=None, **kwargs):
         if not isinstance(data, list):
             raise ValueError('RestList data must be list object')
 
         self.__parent__ = parent
+        self.__opts__.update(kwargs)
 
         for item in data:
             self.append(item)
@@ -172,20 +226,20 @@ class RestList(RestResponseObj, list):
 
     def __getitem__(self, index):
         item = super(RestList, self).__getitem__(index)
-        return utils.decode_item(item)
+        return utils.decode_item(item, **self.__opts__)
 
     def __contains__(self, item):
         if not (isinstance(item, RestResponseObj) or isinstance(item, NoneProp)):
-            item = utils.encode_item(item)
+            item = utils.encode_item(item, **self.__opts__)
         return super(RestList, self).__contains__(item)
 
     def __iter__(self):
         for item in list.__iter__(self):
-            yield utils.decode_item(item)
+            yield utils.decode_item(item, **self.__opts__)
 
     def append(self, item):
         if not (isinstance(item, RestResponseObj) or isinstance(item, NoneProp)):
-            utils.encode_item(item)
+            utils.encode_item(item, **self.__opts__)
         super(RestList, self).append(RestResponse.parse(item, parent=self))
         self.changed()
 
@@ -195,7 +249,7 @@ class RestList(RestResponseObj, list):
 
     def insert(self, index, item):
         if not (isinstance(item, RestResponseObj) or isinstance(item, NoneProp)):
-            utils.encode_item(item)
+            utils.encode_item(item, **self.__opts__)
         super(RestList, self).insert(index, RestResponse.parse(item, parent=self))
         self.changed()
 
@@ -205,7 +259,7 @@ class RestList(RestResponseObj, list):
         else:
             value = super(RestList, self).pop()
         self.changed()
-        return utils.decode_item(value)
+        return utils.decode_item(value, **self.__opts__)
 
     def remove(self, item):
         super(RestList, self).remove(item)
@@ -213,11 +267,13 @@ class RestList(RestResponseObj, list):
 
 
 class RestObject(RestResponseObj, dict):
-    def __init__(self, data, parent=None):
+    def __init__(self, data, parent=None, **kwargs):
         if not isinstance(data, dict):
             raise ValueError('RestObject data must be dict object')
         self.__data__ = {}
         self.__parent__ = parent
+        self.__opts__.update(kwargs)
+
         for k, v in six.iteritems(data):
             self.__data__[k] = self._init_data(v)
 
@@ -340,11 +396,11 @@ class RestObject(RestResponseObj, dict):
 
     def _init_data(self, v):
         if isinstance(v, dict) and not isinstance(v, RestObject):
-            return RestObject(v, parent=self)
+            return RestObject(v, parent=self, **self.__opts__)
         elif isinstance(v, list) and not isinstance(v, RestList):
-            return RestList(v, parent=self)
+            return RestList(v, parent=self, **self.__opts__)
         else:
-            return utils.decode_item(v)
+            return utils.decode_item(v, **self.__opts__)
 
     def _update_object(self, data):
         for k, v in six.iteritems(data):
@@ -353,30 +409,30 @@ class RestObject(RestResponseObj, dict):
 
 
 class RestResponse(object):
-    def __new__(self, data):
+    def __new__(self, data, **kwargs):
         if isinstance(data, str) or not utils.PYTHON3 and isinstance(data, unicode):
-            return RestResponse.loads(data)
+            return RestResponse.loads(data, **kwargs)
         else:
-            return RestResponse.parse(data)
+            return RestResponse.parse(data, **kwargs)
 
     @staticmethod
-    def parse(data, parent=None):
+    def parse(data, parent=None, **kwargs):
         if isinstance(data, RestResponseObj) or isinstance(data, NoneProp):
             return data
         elif isinstance(data, dict):
-            return RestObject(data, parent=parent)
+            return RestObject(data, parent=parent, **kwargs)
         elif isinstance(data, list):
-            return RestList(data, parent=parent)
+            return RestList(data, parent=parent, **kwargs)
         elif isinstance(data, type(None)):
-            return RestObject({}, parent=parent)
+            return RestObject({}, parent=parent, **kwargs)
         else:
-            return utils.encode_item(data)
+            return utils.encode_item(data, **kwargs)
 
     @staticmethod
-    def loads(data):
+    def loads(data, **kwargs):
         try:
             data = json.loads(data)
         except Exception:
             raise ValueError('RestResponse data must be JSON deserializable')
 
-        return RestResponse.parse(data)
+        return RestResponse.parse(data, **kwargs)

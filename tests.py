@@ -1,11 +1,218 @@
-import sys
 import RestResponse
 import requests
 from datetime import datetime
 from decimal import Decimal
-import base64
 import json
-import cloudpickle as pickle
+
+
+class Ref(RestResponse.ApiModel):
+    def __init__(self, data):
+        self._data = data
+
+    @property
+    def id(self):
+        return int(self._data.id)
+
+    @id.setter
+    def id(self, id):
+        self._data.id = int(id)
+
+    @property
+    def string(self):
+        return str(self._data.string)
+
+    @string.setter
+    def string(self, string):
+        self._data.string = str(string)
+
+
+class Model(RestResponse.ApiModel):
+    def __init__(self, data):
+        self._data = data
+
+    @property
+    def id(self):
+        return int(self._data.id)
+
+    @id.setter
+    def id(self, id):
+        self._data.id = int(id)
+
+    @property
+    def string(self):
+        return str(self._data.string)
+
+    @string.setter
+    def string(self, string):
+        self._data.string = str(string)
+
+    @property
+    def floating_point(self):
+        return float(self._data.floating_point)
+
+    @floating_point.setter
+    def floating_point(self, floating_point):
+        self._data.floating_point = float(floating_point)
+
+    @property
+    def date_time(self):
+        return self._format_datetime(self._data.date_time)
+
+    @date_time.setter
+    def date_time(self, date_time):
+        self._data.date_time = self._format_datetime(date_time)
+
+    @property
+    def func(self):
+        return self._data.func
+
+    @func.setter
+    def func(self, func):
+        self._data.func = func
+
+    @property
+    def binary(self):
+        return self._data.binary
+
+    @binary.setter
+    def binary(self, binary):
+        self._data.binary = binary
+
+    @property
+    def ref(self):
+        if not self._data.ref:
+            self._data.ref = Ref()
+        return Ref(self._data.ref)
+
+    @ref.setter
+    def ref(self, ref):
+        self._data.ref = Ref(ref)
+
+    @property
+    def int_collection(self):
+        if not self._data.int_collection:
+            self._data.int_collection = []
+        return [int(x) for x in self._data.int_collection]
+
+    @int_collection.setter
+    def int_collection(self, int_collection):
+        self._data.int_collection = [int(x) for x in self._data.int_collection]
+
+    @property
+    def ref_collection(self):
+        if not self._data.ref_collection:
+            self._data.ref_collection = []
+        return [Ref(x) for x in self._data.ref_collection]
+
+    @ref_collection.setter
+    def ref_collection(self, ref_collection):
+        self._data.ref_collection = [Ref(x) for x in self._data.ref_collection]
+
+
+def test_api_model():
+    d = datetime.utcnow()
+    model = Model({
+        'id': 5,
+        'string': 'foo',
+        'floating_point': float(4.0),
+        'date_time': d,
+        'ref': {
+            'id': 5,
+            'string': 'string'
+        },
+        'int_collection': [1, 2, 3],
+        'ref_collection': [
+            {
+                'id': 1,
+                'string': 'string'
+            },
+            {
+                'id': 2,
+                'string': 'string'
+            }
+        ]
+    })
+
+    assert isinstance(model.id, int)
+    assert model.id == 5
+    assert isinstance(model.string, str)
+    assert model.string == 'foo'
+    assert isinstance(model.floating_point, float)
+    assert model.floating_point == float(4.0)
+    assert isinstance(model.date_time, datetime)
+    assert model.date_time == d
+    assert isinstance(model.ref, Ref)
+    assert model.ref.id == 5
+    assert model.ref.string == 'string'
+    assert isinstance(model.int_collection, list)
+    assert len(model.int_collection) == 3
+    for ref in model.ref_collection:
+        assert isinstance(ref, Ref)
+    as_dict = model._to_dict()
+    assert as_dict['id'] == 5
+    assert as_dict['string'] == 'foo'
+    assert as_dict['floating_point'] == float(4.0)
+    assert as_dict['date_time'] == d.isoformat()
+
+    model.id = 10
+    assert model.id == 10
+    model.string = 'bar'
+    assert model.string == 'bar'
+    model.floating_point = Decimal(5.3)
+    assert model.floating_point == float(5.3)
+
+    try:
+        model.id = '5'
+        assert model.id == 5
+        model.id = 'test'
+        assert False
+    except Exception as e:
+        assert isinstance(e, ValueError)
+
+    model.string = 5
+    assert model.string == '5'
+
+    try:
+        model.floating_point = 'test'
+        assert False
+    except Exception as e:
+        assert isinstance(e, ValueError)
+
+    try:
+        model.func = lambda x: x + 1
+        as_dict = model._to_dict()
+    except Exception as e:
+        assert isinstance(e, ValueError)
+
+    try:
+        model.binary = requests.get('https://cataas.com/cat').content
+        as_dict = model._to_dict()
+    except Exception as e:
+        if RestResponse.utils.PYTHON3:
+            assert isinstance(e, ValueError)
+        else:
+            assert isinstance(e, UnicodeDecodeError)
+
+    Model.__opts__ = {
+        'encode_binary': True,
+        'encode_callable': True,
+        'decode_binary': True,
+        'decode_callable': True
+    }
+
+    model = Model({
+        'binary': requests.get('https://cataas.com/cat').content,
+        'func': lambda x: x + 1
+    })
+
+    as_dict = model._to_dict()
+    assert RestResponse.utils._decode_binary(as_dict.get('binary')) == model.binary
+
+    func = RestResponse.utils._decode_callable(as_dict.get('func'))
+    if not RestResponse.utils.PYTHON3:
+        assert func.func_code == model.func.func_code
+    else:
+        assert func.__code__ == model.func.__code__
 
 
 def test_none_prop():
@@ -195,14 +402,12 @@ def test_supported_encoder_types():
 
     raw = json.loads(repr(data))
     assert raw['binary'].startswith('__binary__: ')
-    assert base64.b64decode(raw['binary'].replace('__binary__: ', '')) == binary
+    assert RestResponse.utils._decode_binary(raw['binary']) == binary
     assert raw['callable'].startswith('__callable__: ')
-
+    func = RestResponse.utils._decode_callable(raw['callable'])
     if not RestResponse.utils.PYTHON3:
-        assert pickle.loads(base64.b64decode(raw['callable'].replace('__callable__: ', ''))).func_code == \
-            data.callable.func_code
+        assert func.func_code == data.callable.func_code
     else:
-        assert pickle.loads(base64.b64decode(raw['callable'].replace('__callable__: ', ''))).__code__ == \
-            data.callable.__code__
-    assert pickle.loads(base64.b64decode(raw['callable'].replace('__callable__: ', '')))(1) == 2
+        assert func.__code__ == data.callable.__code__
+    assert func(1) == 2
     assert raw['ascii_unicode'] == 'test'

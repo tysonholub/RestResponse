@@ -1,5 +1,5 @@
 from .objects import (
-    RestEncoder, RestResponse, RestObject, RestList, NoneProp, RestResponseObj
+    RestEncoder, RestResponse, RestObject, RestList, NoneProp, RestResponseObj, ApiModel
 )
 from . import orm
 
