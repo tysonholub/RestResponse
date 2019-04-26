@@ -56,7 +56,7 @@ def test_api_model():
     assert len(model.int_collection) == 3
     for ref in model.ref_collection:
         assert isinstance(ref, Ref)
-    as_dict = model._to_dict()
+    as_dict = model._as_json
     assert as_dict['id'] == 5
     assert as_dict['string'] == 'foo'
     assert as_dict['floating_point'] == float(4.0)
@@ -97,13 +97,13 @@ def test_api_model():
 
     try:
         model.func = lambda x: x + 1
-        as_dict = model._to_dict()
+        as_dict = model._as_json
     except Exception as e:
         assert isinstance(e, ValueError)
 
     try:
         model.binary = requests.get('https://cataas.com/cat').content
-        as_dict = model._to_dict()
+        as_dict = model._as_json
     except Exception as e:
         if RestResponse.utils.PYTHON3:
             assert isinstance(e, ValueError)
@@ -132,7 +132,8 @@ def test_api_model():
         'func': lambda x: x + 1
     })
 
-    as_dict = model._to_dict()
+    as_dict = model._as_json
+    assert isinstance(as_dict, dict)
     assert RestResponse.utils._decode_binary(as_dict.get('binary')) == model.binary
 
     func = RestResponse.utils._decode_callable(as_dict.get('func'))
@@ -140,6 +141,36 @@ def test_api_model():
         assert func.func_code == model.func.func_code
     else:
         assert func.__code__ == model.func.__code__
+
+
+def test_api_collection():
+    models = RestResponse.ApiCollection(Model)
+    models.extend([Model({
+        'id': 5,
+        'string': 'foo',
+        'floating_point': float(4.0),
+        'ref': {
+            'id': 5,
+            'string': 'string',
+            'foo': 'bar'
+        },
+        'int_collection': [1, 2, 3],
+        'ref_collection': [
+            {
+                'id': 1,
+                'string': 'string'
+            },
+            {
+                'id': 2,
+                'string': 'string'
+            }
+        ],
+        'foo': 'bar'
+    }) for x in range(3)])
+
+    assert len(models) == 3
+    as_list = models._as_json
+    assert isinstance(as_list, list)
 
 
 def test_none_prop():

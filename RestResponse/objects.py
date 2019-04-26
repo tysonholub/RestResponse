@@ -433,7 +433,8 @@ class ApiModel(object):
             if not prop.startswith('_') and prop in data:
                 eval('self.__setattr__("{0}", data[prop])'.format(prop))
 
-    def _to_dict(self):
+    @property
+    def _as_json(self):
         return self._data()
 
     def _format_datetime(self, d, format='%Y-%m-%dT%H:%M:%SZ'):
@@ -453,9 +454,13 @@ class ApiCollection(RestList):
     @property
     def _data(self):
         if issubclass(self.cls, ApiModel):
-            return [x._data for x in self]
+            return RestResponse.parse([x._data for x in self])
         else:
-            return [x for x in self]
+            return RestResponse.parse([x for x in self])
+
+    @property
+    def _as_json(self):
+        return self._data()
 
     def append(self, item):
         if isinstance(item, self.cls):
