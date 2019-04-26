@@ -3,113 +3,17 @@ import requests
 from datetime import datetime
 from decimal import Decimal
 import json
-
-
-class Ref(RestResponse.ApiModel):
-    def __init__(self, data):
-        self._data = data
-
-    @property
-    def id(self):
-        return int(self._data.id)
-
-    @id.setter
-    def id(self, id):
-        self._data.id = int(id)
-
-    @property
-    def string(self):
-        return str(self._data.string)
-
-    @string.setter
-    def string(self, string):
-        self._data.string = str(string)
-
-
-class Model(RestResponse.ApiModel):
-    def __init__(self, data):
-        self._data = data
-
-    @property
-    def id(self):
-        return int(self._data.id)
-
-    @id.setter
-    def id(self, id):
-        self._data.id = int(id)
-
-    @property
-    def string(self):
-        return str(self._data.string)
-
-    @string.setter
-    def string(self, string):
-        self._data.string = str(string)
-
-    @property
-    def floating_point(self):
-        return float(self._data.floating_point)
-
-    @floating_point.setter
-    def floating_point(self, floating_point):
-        self._data.floating_point = float(floating_point)
-
-    @property
-    def date_time(self):
-        return self._format_datetime(self._data.date_time)
-
-    @date_time.setter
-    def date_time(self, date_time):
-        self._data.date_time = self._format_datetime(date_time)
-
-    @property
-    def func(self):
-        return self._data.func
-
-    @func.setter
-    def func(self, func):
-        self._data.func = func
-
-    @property
-    def binary(self):
-        return self._data.binary
-
-    @binary.setter
-    def binary(self, binary):
-        self._data.binary = binary
-
-    @property
-    def ref(self):
-        if not self._data.ref:
-            self._data.ref = Ref()
-        return Ref(self._data.ref)
-
-    @ref.setter
-    def ref(self, ref):
-        self._data.ref = Ref(ref)
-
-    @property
-    def int_collection(self):
-        if not self._data.int_collection:
-            self._data.int_collection = []
-        return [int(x) for x in self._data.int_collection]
-
-    @int_collection.setter
-    def int_collection(self, int_collection):
-        self._data.int_collection = [int(x) for x in self._data.int_collection]
-
-    @property
-    def ref_collection(self):
-        if not self._data.ref_collection:
-            self._data.ref_collection = []
-        return [Ref(x) for x in self._data.ref_collection]
-
-    @ref_collection.setter
-    def ref_collection(self, ref_collection):
-        self._data.ref_collection = [Ref(x) for x in self._data.ref_collection]
+from .models import Model, Ref
 
 
 def test_api_model():
+    Model.__opts__ = {
+        'encode_binary': False,
+        'encode_callable': False,
+        'decode_binary': False,
+        'decode_callable': False
+    }
+
     d = datetime.utcnow()
     model = Model({
         'id': 5,
@@ -118,7 +22,8 @@ def test_api_model():
         'date_time': d,
         'ref': {
             'id': 5,
-            'string': 'string'
+            'string': 'string',
+            'foo': 'bar'
         },
         'int_collection': [1, 2, 3],
         'ref_collection': [
@@ -130,9 +35,12 @@ def test_api_model():
                 'id': 2,
                 'string': 'string'
             }
-        ]
+        ],
+        'foo': 'bar'
     })
 
+    assert 'foo' not in model._data
+    assert 'foo' not in model.ref._data
     assert isinstance(model.id, int)
     assert model.id == 5
     assert isinstance(model.string, str)
@@ -160,6 +68,15 @@ def test_api_model():
     assert model.string == 'bar'
     model.floating_point = Decimal(5.3)
     assert model.floating_point == float(5.3)
+
+    model.int_collection.append(1337)
+    assert 1337 in model.int_collection
+    model.ref_collection.append(Ref({
+        'id': 1337,
+        'string': 'foo'
+    }))
+    assert model.ref_collection[-1].id == 1337
+    assert model.ref_collection[-1].string == 'foo'
 
     try:
         model.id = '5'
@@ -192,6 +109,16 @@ def test_api_model():
             assert isinstance(e, ValueError)
         else:
             assert isinstance(e, UnicodeDecodeError)
+
+    try:
+        model.int_collection.append('test')
+    except Exception as e:
+        assert isinstance(e, ValueError)
+
+    try:
+        model.ref_collection.append('test')
+    except Exception as e:
+        assert isinstance(e, ValueError)
 
     Model.__opts__ = {
         'encode_binary': True,

@@ -184,52 +184,65 @@ Data will be saved to the database as a serialized json blob. When data is loade
 
 ## ApiModel
 
-Inherit RestResponse.ApiModel to facilitate typing out API models. Consider the following snippet:
+Inherit RestResponse.ApiModel to facilitate typing out API models. Please note your properties should NOT start with `_`. `ApiModel._data` setter ensures that passed in data conforms to your properties, effectively filtering out underscored properties identified via `dir()`. Consider the following snippet:
 ```python
-from RestResponse import ApiModel
+from RestResponse import ApiModel, ApiCollection
 
 
 class Model(ApiModel):
     def __init__(self, data):
         self._data = data
 
+    # this _foo property will be ignored on init
+    @property
+    def _foo(self):
+        return str(self._data._foo) if self._data._foo
+
+    @_foo.setter
+    def _foo(self, _foo):
+        self._data._foo = str(_foo)
+
     @property
     def id(self):
-        '''Gets the id of this Model.
-
-        :return: The id of this Model.
-        :rtype: int
-        '''
-        return int(self._data.id)
+        return int(self._data.id) if self._data.id else None
 
     @id.setter
     def id(self, id):
-        '''Sets the id of this Model.
-
-        :param id: The id of this Model.
-        :type: int
-        '''
         self._data.id = int(id)
 
     @property
     def reference(self):
-        '''Sets the reference of this Model.
-
-        :param reference: The reference of this Model.
-        :type: Reference
-        '''
         if not self._data.reference:
             self._data.reference = Reference()
         return Reference(self._data.reference)
 
     @reference.setter
     def reference(self, reference):
-        '''Sets the reference of this Model.
+        self._data.reference = Reference(reference)
 
-        :param reference: The reference of this Model.
-        :type: Reference
-        '''
-        self._data.reference = Reference(data)
+    @property
+    def int_collection(self):
+        if not self._data.int_collection:
+            self._data.int_collection = ApiCollection(int)
+        return self._data.int_collection
+
+    @int_collection.setter
+    def int_collection(self, int_collection):
+        if not self._data.int_collection:
+            self._data.int_collection = ApiCollection(int)
+        self._data.int_collection.extend([int(x) for x in int_collection])
+
+    @property
+    def ref_collection(self):
+        if not self._data.ref_collection:
+            self._data.ref_collection = ApiCollection(Reference)
+        return self._data.ref_collection
+
+    @ref_collection.setter
+    def ref_collection(self, ref_collection):
+        if not self._data.ref_collection:
+            self._data.ref_collection = ApiCollection(Reference)
+        self._data.ref_collection.extend([Reference(x) for x in ref_collection])
 
 
 class Reference(ApiModel):
@@ -238,37 +251,55 @@ class Reference(ApiModel):
 
     @property
     def id(self):
-        '''Gets the id of this Reference.
-
-        :return: The id of this Reference.
-        :rtype: int
-        '''
-        return int(self._data.id)
+        return int(self._data.id) if self._data.id else None
 
     @id.setter
     def id(self, id):
-        '''Sets the id of this Reference.
-
-        :param id: The id of this Reference.
-        :type: int
-        '''
         self._data.id = int(id)
 ```
 Then initialize with RestObject, dict, ApiModel, or serialized JSON
 ```python
 >>> model = Model({
-  'id': 5,
-  'reference': {
-    'id': 1
-  }
+    'id': 5,
+    'ref': {
+        'id': 5,
+        'foo': 'bar'
+    },
+    'int_collection': [1, 2, 3],
+    'ref_collection': [
+        {
+            'id': 1,
+        },
+        {
+            'id': 2,
+        }
+    ],
+    'foo': 'bar',
+    '_foo': '_bar'
 })
 >>> print model._data.pretty_print()
 {
-    "id": 5,
-    "reference": {
-        "id": 1
-    }
+    "int_collection": [
+        1,
+        2,
+        3
+    ],
+    "ref": {
+        "id": 5
+    },
+    "ref_collection": [
+        {
+            "id": 1
+        },
+        {
+            "id": 2
+        }
+    ],
+    "id": 5
 }
+>>> assert '_foo' not in model._data
+>>> assert 'foo' not in model._data
+>>> assert 'foo' not in model.ref._data
 >>> type(model._data)
 <class 'RestResponse.objects.RestObject'>
 ```
@@ -284,7 +315,7 @@ Model.__opts__ = {
 
 ## Testing
 
-    $ pytest -s tests.py
+    $ pytest -s tests/tests.py
 
 ## Contributing
 

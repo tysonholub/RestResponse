@@ -6,41 +6,6 @@ from sqlalchemy.ext.mutable import Mutable
 from RestResponse import utils
 
 
-class ApiModel(object):
-    __opts__ = {
-        'encode_binary': False,
-        'encode_callable': False,
-        'decode_binary': False,
-        'decode_callable': False
-    }
-
-    @property
-    def _data(self):
-        return self.__data
-
-    @_data.setter
-    def _data(self, data):
-        self.__data = data = data or RestResponse.parse({}, **self.__opts__)
-        if isinstance(data, dict) or isinstance(data, list):
-            self.__data = RestResponse.parse(data, **self.__opts__)
-        elif isinstance(data, str) or not utils.PYTHON3 and isinstance(data, unicode):
-            self.__data = RestResponse.loads(data or "{}", **self.__opts__)
-        elif isinstance(data, ApiModel):
-            self.__data = data._data
-
-    def _to_dict(self):
-        return self._data()
-
-    def _format_datetime(self, d, format='%Y-%m-%dT%H:%M:%SZ'):
-        if not isinstance(d, datetime):
-            try:
-                return datetime.strptime(d, format)
-            except ValueError:
-                return None
-        else:
-            return d
-
-
 class RestEncoder(utils.CustomObjectEncoder):
     __opts__ = {
         'encode_binary': True,
@@ -436,3 +401,74 @@ class RestResponse(object):
             raise ValueError('RestResponse data must be JSON deserializable')
 
         return RestResponse.parse(data, **kwargs)
+
+
+class ApiModel(object):
+    __opts__ = {
+        'encode_binary': False,
+        'encode_callable': False,
+        'decode_binary': False,
+        'decode_callable': False
+    }
+
+    @property
+    def _data(self):
+        return self.__data
+
+    @_data.setter
+    def _data(self, data):
+        data = data or RestResponse.parse({}, **self.__opts__)
+        if isinstance(data, dict) or isinstance(data, list):
+            data = RestResponse.parse(data, **self.__opts__)
+        elif isinstance(data, str) or not utils.PYTHON3 and isinstance(data, unicode):
+            try:
+                data = RestResponse.loads(data or "{}", **self.__opts__)
+            except ValueError as e:
+                six.raise_from(ValueError('{0} data must be JSON serializable'.format(self.__class__)), e)
+        elif isinstance(data, ApiModel):
+            data = data._data
+
+        self.__data = RestResponse.parse({})
+        for prop in dir(self):
+            if not prop.startswith('_') and prop in data:
+                eval('self.__setattr__("{0}", data[prop])'.format(prop))
+
+    def _to_dict(self):
+        return self._data()
+
+    def _format_datetime(self, d, format='%Y-%m-%dT%H:%M:%SZ'):
+        if not isinstance(d, datetime):
+            try:
+                return datetime.strptime(d, format)
+            except ValueError:
+                return None
+        else:
+            return d
+
+
+class ApiCollection(RestList):
+    def __init__(self, cls):
+        self.cls = cls
+
+    @property
+    def _data(self):
+        if issubclass(self.cls, ApiModel):
+            return [x._data for x in self]
+        else:
+            return [x for x in self]
+
+    def append(self, item):
+        if isinstance(item, self.cls):
+            super(ApiCollection, self).append(item)
+        else:
+            raise ValueError('item must be type of {0}'.format(self.cls))
+
+    def insert(self, index, item):
+        if isinstance(item, self.cls):
+            super(ApiCollection, self).insert(index, item)
+        else:
+            raise ValueError('item must be type of {0}'.format(self.cls))
+
+    def extend(self, items):
+        for item in items:
+            self.append(item)
