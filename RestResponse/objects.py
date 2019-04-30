@@ -408,7 +408,8 @@ class ApiModel(object):
         'encode_binary': False,
         'encode_callable': False,
         'decode_binary': False,
-        'decode_callable': False
+        'decode_callable': False,
+        'encode_datetime': lambda x: datetime.strftime(x, '%Y-%m-%dT%H:%M:%SZ')
     }
 
     @property
@@ -445,6 +446,9 @@ class ApiModel(object):
                 return None
         else:
             return d
+
+    def _format_string(self, s):
+        return '%s' % s
 
 
 class ApiCollection(RestList):

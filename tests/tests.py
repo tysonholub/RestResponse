@@ -7,12 +7,12 @@ from .models import Model, Ref
 
 
 def test_api_model():
-    Model.__opts__ = {
+    Model.__opts__.update({
         'encode_binary': False,
         'encode_callable': False,
         'decode_binary': False,
         'decode_callable': False
-    }
+    })
 
     d = datetime.utcnow()
     model = Model({
@@ -60,7 +60,7 @@ def test_api_model():
     assert as_dict['id'] == 5
     assert as_dict['string'] == 'foo'
     assert as_dict['floating_point'] == float(4.0)
-    assert as_dict['date_time'] == d.isoformat()
+    assert as_dict['date_time'] == Model.__opts__['encode_datetime'](d)
 
     model.id = 10
     assert model.id == 10
@@ -120,12 +120,12 @@ def test_api_model():
     except Exception as e:
         assert isinstance(e, ValueError)
 
-    Model.__opts__ = {
+    Model.__opts__.update({
         'encode_binary': True,
         'encode_callable': True,
         'decode_binary': True,
         'decode_callable': True
-    }
+    })
 
     model = Model({
         'binary': requests.get('https://cataas.com/cat').content,

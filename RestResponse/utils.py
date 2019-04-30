@@ -65,7 +65,10 @@ def encode_item(item, encode_binary=True, encode_callable=True, **kwargs):
     if isinstance(item, Decimal):
         return float(item)
     elif isinstance(item, datetime) or isinstance(item, date):
-        return item.isoformat()
+        if 'encode_datetime' in kwargs and callable(kwargs.get('encode_datetime')):
+            return kwargs.get('encode_datetime')(item)
+        else:
+            return item.isoformat()
     elif encode_callable and callable(item):
         return _encode_callable(item)
     elif (
