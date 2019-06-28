@@ -317,7 +317,10 @@ class RestObject(RestResponseObj, dict):
             self._update_object({name: value})
 
     def __getitem__(self, name):
-        return self.__data__.__getitem__(name)
+        if name not in self.__data__:
+            return NoneProp(self, name)
+        else:
+            return self.__data__.__getitem__(name)
 
     def __setitem__(self, name, value):
         self.__setattr__(name, value)

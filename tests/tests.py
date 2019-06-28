@@ -221,15 +221,12 @@ def test_rest_obj():
     obj.none_prop = obj.missing_prop
     assert obj().get('none_prop') is None
     assert obj['test'] == 'this'
-    exc = None
-    try:
-        obj['missing_key']
-    except Exception as e:
-        exc = e
-    assert isinstance(exc, KeyError)
+    assert isinstance(obj['missing_key'], RestResponse.NoneProp)
     obj['key'] = obj.restobj
     assert obj['key'].test == 'this' == obj.key.test == obj['key']['test']
     assert obj['key'].callable(1) == 2
+    obj['new_key'].some_prop = [1]
+    assert len(obj.new_key.some_prop) == 1
 
 
 def test_callable():
