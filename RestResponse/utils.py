@@ -97,11 +97,11 @@ def decode_item(item, decode_binary=True, decode_callable=True, **kwargs):
     elif decode_callable and not PYTHON3 and isinstance(item, unicode) and item.startswith('__callable__: '):
         return _decode_callable(item)
     elif decode_binary and isinstance(item, str) and item.startswith('__binary__: '):
-        return _decode_binary(item)
+        item = _decode_binary(item)
     elif decode_binary and PYTHON3 and isinstance(item, bytes) and item.startswith(b'__binary__: '):
-        return _decode_binary(item.decode('utf-8'))
+        item = _decode_binary(item.decode('utf-8'))
     elif decode_binary and not PYTHON3 and isinstance(item, unicode) and item.startswith('__binary__: '):
-        return _decode_binary(item)
+        item = _decode_binary(item)
     try:
         if PYTHON3 and isinstance(item, bytes):
             return item.decode('utf-8')
