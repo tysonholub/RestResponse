@@ -184,13 +184,14 @@ Data will be saved to the database as a serialized json blob. When data is loade
 
 ## ApiModel
 
-Inherit RestResponse.ApiModel to facilitate typing out API models. Please note your properties should NOT start with `_`. `ApiModel._data` setter ensures that passed in data conforms to your properties, effectively filtering out underscored properties identified via `dir()`. Consider the following snippet:
+Inherit RestResponse.ApiModel to facilitate typing out API models. Please note your properties should NOT start with `_`. `ApiModel._data` setter ensures that passed in data conforms to your properties, effectively filtering out underscored properties identified via `dir()`. This behavior can be overriden by adding properties to `__opts__['_overrides']` (**Note**: `__opts__` must be updated before setting `_data`). Consider the following snippet:
 ```python
 from RestResponse import ApiModel, ApiCollection
 
 
 class Model(ApiModel):
     def __init__(self, data):
+        self.__opts__['_overrides'] = ['_bar']
         self._data = data
 
     # this _foo property will be ignored on init
@@ -201,6 +202,14 @@ class Model(ApiModel):
     @_foo.setter
     def _foo(self, _foo):
         self._data._foo = str(_foo)
+
+    @property
+    def _bar(self):
+        return str(self._data._bar) if self._data._bar
+
+    @_bar.setter
+    def _bar(self, _bar):
+        self._data._bar = str(_bar)
 
     @property
     def id(self):
@@ -275,7 +284,8 @@ Then initialize with RestObject, dict, ApiModel, or serialized JSON
         }
     ],
     'foo': 'bar',
-    '_foo': '_bar'
+    '_foo': '_bar',
+    '_bar': 'foo'
 })
 >>> print model._data.pretty_print()
 {
@@ -295,9 +305,11 @@ Then initialize with RestObject, dict, ApiModel, or serialized JSON
             "id": 2
         }
     ],
-    "id": 5
+    "id": 5,
+    "_bar": "foo"
 }
 >>> assert '_foo' not in model._data
+>>> assert '_bar' in model._data
 >>> assert 'foo' not in model._data
 >>> assert 'foo' not in model.ref._data
 >>> type(model._data)

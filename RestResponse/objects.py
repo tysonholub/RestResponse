@@ -412,7 +412,8 @@ class ApiModel(object):
         'encode_callable': False,
         'decode_binary': False,
         'decode_callable': False,
-        'encode_datetime': lambda x: datetime.strftime(x, '%Y-%m-%dT%H:%M:%SZ')
+        'encode_datetime': lambda x: datetime.strftime(x, '%Y-%m-%dT%H:%M:%SZ'),
+        '_overrides': [],
     }
 
     @property
@@ -434,7 +435,7 @@ class ApiModel(object):
 
         self.__data = RestResponse.parse({})
         for prop in dir(self):
-            if not prop.startswith('_') and prop in data:
+            if (not prop.startswith('_') or prop in self.__opts__.get('_overrides', [])) and prop in data:
                 eval('self.__setattr__("{0}", data[prop])'.format(prop))
 
     @property

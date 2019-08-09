@@ -115,3 +115,17 @@ class Ref(ApiModel):
     @string.setter
     def string(self, string):
         self._data.string = str(string)
+
+
+class OverridesModel(ApiModel):
+    def __init__(self, data):
+        self.__opts__['_overrides'] = ['_foo']
+        self._data = data
+
+    @property
+    def _foo(self):
+        return str(self._data._foo)
+
+    @_foo.setter
+    def _foo(self, _foo):
+        self._data._foo = str(_foo)

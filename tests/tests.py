@@ -3,7 +3,7 @@ import requests
 from datetime import datetime
 from decimal import Decimal
 import json
-from .models import Model, Ref
+from .models import Model, Ref, OverridesModel
 
 
 def test_none_prop():
@@ -230,11 +230,21 @@ def test_orm_sqlalchemy():
 
 
 def test_api_model():
+    model = OverridesModel({
+        '_foo': 'bar',
+        'foo': 'bar'
+    })
+
+    assert '_foo' in model._data
+    assert 'foo' not in model._data
+    assert model._foo == 'bar'
+
     Model.__opts__.update({
         'encode_binary': False,
         'encode_callable': False,
         'decode_binary': False,
-        'decode_callable': False
+        'decode_callable': False,
+        '_overrides': ['_foo']
     })
 
     d = datetime.utcnow()
@@ -259,11 +269,16 @@ def test_api_model():
                 'string': 'string'
             }
         ],
-        'foo': 'bar'
+        'foo': 'bar',
+        '_foo': 'bar',
+        '_bar': 'foo'
     })
 
     assert 'foo' not in model._data
     assert 'foo' not in model.ref._data
+    assert '_bar' not in model._data
+    assert '_foo' in model._data
+    assert model._foo == 'bar'
     assert isinstance(model.id, int)
     assert model.id == 5
     assert isinstance(model.string, str)
