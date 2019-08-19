@@ -530,10 +530,10 @@ class ApiModel(object):
                 warnings.warn('Value must be integer')
                 return None
 
-    def set_bool(self, b):
+    def _set_bool(self, b):
         return self._format_bool(b, raises_value_error=True)
 
-    def get_bool(self, b):
+    def _get_bool(self, b):
         return self._format_bool(b, raises_value_error=False)
 
     def _format_bool(self, b, raises_value_error=False):
