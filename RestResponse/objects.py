@@ -194,6 +194,13 @@ class RestList(RestResponseObj, list):
         item = super(RestList, self).__getitem__(index)
         return utils.decode_item(item, **self.__opts__)
 
+    def __setitem__(self, index, value):
+        if index >= 0 and index < len(self):
+            self.pop(index)
+            self.insert(index, value)
+        else:
+            raise IndexError('list index out of range')
+
     def __contains__(self, item):
         if not (isinstance(item, RestResponseObj) or isinstance(item, NoneProp)):
             item = utils.encode_item(item, **self.__opts__)
@@ -546,12 +553,13 @@ class ApiModel(object):
 
 
 class ApiCollection(RestList):
-    def __init__(self, cls):
-        self.cls = cls
+    def __init__(self, setter, **setter_kwargs):
+        self.setter = setter
+        self.setter_kwargs = setter_kwargs
 
     @property
     def _data(self):
-        if issubclass(self.cls, ApiModel):
+        if issubclass(self.setter, ApiModel):
             return RestResponse.parse([x._data for x in self])
         else:
             return RestResponse.parse([x for x in self])
@@ -561,17 +569,22 @@ class ApiCollection(RestList):
         return self._data()
 
     def append(self, item):
-        if isinstance(item, self.cls):
-            super(ApiCollection, self).append(item)
-        else:
-            raise ValueError('item must be type of {0}'.format(self.cls))
+        value = self.setter(item, **self.setter_kwargs)
+        if value is not None:
+            super(ApiCollection, self).append(value)
 
     def insert(self, index, item):
-        if isinstance(item, self.cls):
-            super(ApiCollection, self).insert(index, item)
-        else:
-            raise ValueError('item must be type of {0}'.format(self.cls))
+        value = self.setter(item, **self.setter_kwargs)
+        if value is not None:
+            super(ApiCollection, self).insert(index, value)
 
     def extend(self, items):
         for item in items:
             self.append(item)
+
+    def __setitem__(self, index, value):
+        if index >= 0 and index < len(self):
+            self.pop(index)
+            self.insert(index, value)
+        else:
+            raise IndexError('list index out of range')

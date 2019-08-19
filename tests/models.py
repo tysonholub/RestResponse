@@ -117,9 +117,19 @@ class Model(ApiModel):
 
     @int_collection.setter
     def int_collection(self, int_collection):
-        if not self._data.int_collection:
-            self._data.int_collection = ApiCollection(int)
-        self._data.int_collection.extend([int(x) for x in int_collection])
+        self._data.int_collection = ApiCollection(self._set_int)
+        self._data.int_collection.extend(int_collection)
+
+    @property
+    def int_collection_doesnt_raise(self):
+        if not self._data.int_collection_doesnt_raise:
+            self._data.int_collection_doesnt_raise = ApiCollection(self._format_int, raises_value_error=False)
+        return self._data.int_collection_doesnt_raise
+
+    @int_collection_doesnt_raise.setter
+    def int_collection_doesnt_raise(self, int_collection):
+        self._data.int_collection_doesnt_raise = ApiCollection(self._format_int, raises_value_error=False)
+        self._data.int_collection_doesnt_raise.extend(int_collection)
 
     @property
     def ref(self):
@@ -139,9 +149,8 @@ class Model(ApiModel):
 
     @ref_collection.setter
     def ref_collection(self, ref_collection):
-        if not self._data.ref_collection:
-            self._data.ref_collection = ApiCollection(Ref)
-        self._data.ref_collection.extend([Ref(x) for x in ref_collection])
+        self._data.ref_collection = ApiCollection(Ref)
+        self._data.ref_collection.extend(ref_collection)
 
 
 class Ref(ApiModel):

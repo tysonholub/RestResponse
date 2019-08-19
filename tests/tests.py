@@ -128,6 +128,15 @@ def test_rest_list():
     lst.append(lst[0].none_prop)
     assert lst()[-1] is None
 
+    lst[0] = {
+        'id': 1,
+        'foo': 'bar'
+    }
+    assert isinstance(lst[0], RestResponse.RestObject)
+
+    with pytest.raises(IndexError):
+        lst[100] = 'foo'
+
 
 def test_pretty_print():
     r = requests.get('http://jsonplaceholder.typicode.com/users/1')
@@ -388,7 +397,7 @@ def test_api_model():
 
 def test_api_collection():
     models = RestResponse.ApiCollection(Model)
-    models.extend([Model({
+    models.extend([{
         'id': 5,
         'string': 'foo',
         'floating_point': float(4.0),
@@ -398,6 +407,7 @@ def test_api_collection():
             'foo': 'bar'
         },
         'int_collection': [1, 2, 3],
+        'int_collection_doesnt_raise': ['test'],
         'ref_collection': [
             {
                 'id': 1,
@@ -409,8 +419,26 @@ def test_api_collection():
             }
         ],
         'foo': 'bar'
-    }) for x in range(3)])
+    } for x in range(3)])
+
+    with pytest.raises(ValueError):
+        models[0].int_collection.append('test')
+
+    assert len(models[0].int_collection_doesnt_raise) == 0
+    models[0].int_collection_doesnt_raise.append('test')
+    assert len(models[0].int_collection_doesnt_raise) == 0
+    models[0].int_collection_doesnt_raise.append(5)
+    assert models[0].int_collection_doesnt_raise[0] == 5
 
     assert len(models) == 3
     as_list = models._as_json
     assert isinstance(as_list, list)
+
+    for m in models:
+        ref = Ref({
+            'id': datetime.utcnow().strftime('%s'),
+            'string': datetime.utcnow().isoformat()
+        })
+        m.ref_collection.append(ref)
+        assert m.ref_collection[-1].id == ref.id
+        assert m.ref_collection[-1].string == ref.string

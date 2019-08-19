@@ -184,7 +184,21 @@ Data will be saved to the database as a serialized json blob. When data is loade
 
 ## ApiModel
 
-Inherit RestResponse.ApiModel to facilitate typing out API models. Please note your properties should NOT start with `_`. `ApiModel._data` setter ensures that passed in data conforms to your properties, effectively filtering out underscored properties identified via `dir()`. This behavior can be overriden by adding properties to `__opts__['_overrides']` (**Note**: `__opts__` must be updated before setting `_data`). Consider the following snippet:
+Inherit RestResponse.ApiModel to facilitate typing out API models. Please note your properties should NOT start with `_`. `ApiModel._data` setter ensures that passed in data conforms to your properties, effectively filtering out underscored properties identified via `dir()`. This behavior can be overriden by adding properties to `__opts__['_overrides']` (**Note**: `__opts__` must be updated before setting `_data`).
+
+For convenience ApiModel includes helper methods for property integrity. These include:
+
+  1. `_set_int`, `_get_int`
+  2. `_set_string`, `_get_string`
+  3. `_set_date`, `_get_date`
+  4. `_set_datetime`, `_get_datetime`
+  5. `_set_float`, `_get_float`
+  6. `_set_bool`, `_get_bool`
+
+You can initalize ApiCollection with one of these helpers (or define your own), or another object such as `Reference` below.
+
+
+Consider the following snippet:
 ```python
 from RestResponse import ApiModel, ApiCollection
 
@@ -197,27 +211,27 @@ class Model(ApiModel):
     # this _foo property will be ignored on init
     @property
     def _foo(self):
-        return str(self._data._foo) if self._data._foo
+        return self._get_string(self._data._foo)
 
     @_foo.setter
     def _foo(self, _foo):
-        self._data._foo = str(_foo)
+        self._data._foo = self._set_string(_foo)
 
     @property
     def _bar(self):
-        return str(self._data._bar) if self._data._bar
+        return self._get_string(self._data._bar)
 
     @_bar.setter
     def _bar(self, _bar):
-        self._data._bar = str(_bar)
+        self._data._bar = self._set_string(_bar)
 
     @property
     def id(self):
-        return int(self._data.id) if self._data.id else None
+        return self._get_int(self._data.id)
 
     @id.setter
     def id(self, id):
-        self._data.id = int(id)
+        self._data.id = self._set_int(id)
 
     @property
     def reference(self):
@@ -232,14 +246,13 @@ class Model(ApiModel):
     @property
     def int_collection(self):
         if not self._data.int_collection:
-            self._data.int_collection = ApiCollection(int)
+            self._data.int_collection = ApiCollection(self._set_int)
         return self._data.int_collection
 
     @int_collection.setter
     def int_collection(self, int_collection):
-        if not self._data.int_collection:
-            self._data.int_collection = ApiCollection(int)
-        self._data.int_collection.extend([int(x) for x in int_collection])
+        self._data.int_collection = ApiCollection(self._set_int)
+        self._data.int_collection.extend(int_collection)
 
     @property
     def ref_collection(self):
@@ -249,9 +262,8 @@ class Model(ApiModel):
 
     @ref_collection.setter
     def ref_collection(self, ref_collection):
-        if not self._data.ref_collection:
-            self._data.ref_collection = ApiCollection(Reference)
-        self._data.ref_collection.extend([Reference(x) for x in ref_collection])
+        self._data.ref_collection = ApiCollection(Reference)
+        self._data.ref_collection.extend(ref_collection)
 
 
 class Reference(ApiModel):
@@ -260,11 +272,11 @@ class Reference(ApiModel):
 
     @property
     def id(self):
-        return int(self._data.id) if self._data.id else None
+        return self._get_int(self._data.id)
 
     @id.setter
     def id(self, id):
-        self._data.id = int(id)
+        self._data.id = self._set_int(id)
 ```
 Then initialize with RestObject, dict, ApiModel, or serialized JSON
 ```python
