@@ -1,6 +1,7 @@
+import pytest
 import RestResponse
 import requests
-from datetime import datetime
+from datetime import datetime, date
 from decimal import Decimal
 import json
 from .models import Model, Ref, OverridesModel
@@ -248,11 +249,13 @@ def test_api_model():
     })
 
     d = datetime.utcnow()
+    d2 = d.date()
     model = Model({
         'id': 5,
         'string': 'foo',
         'floating_point': float(4.0),
         'date_time': d,
+        'date': d2,
         'ref': {
             'id': 5,
             'string': 'string',
@@ -281,12 +284,17 @@ def test_api_model():
     assert model._foo == 'bar'
     assert isinstance(model.id, int)
     assert model.id == 5
-    assert isinstance(model.string, str)
+    if RestResponse.utils.PYTHON3:
+        assert isinstance(model.string, str)
+    else:
+        assert isinstance(model.string, unicode)
     assert model.string == 'foo'
     assert isinstance(model.floating_point, float)
     assert model.floating_point == float(4.0)
     assert isinstance(model.date_time, datetime)
     assert model.date_time == d
+    assert isinstance(model.date, date)
+    assert model.date == d2
     assert isinstance(model.ref, Ref)
     assert model.ref.id == 5
     assert model.ref.string == 'string'
@@ -299,6 +307,7 @@ def test_api_model():
     assert as_dict['string'] == 'foo'
     assert as_dict['floating_point'] == float(4.0)
     assert as_dict['date_time'] == Model.__opts__['encode_datetime'](d)
+    assert as_dict['date'] == Model.__opts__['encode_date'](d2)
 
     model.id = 10
     assert model.id == 10
@@ -316,47 +325,43 @@ def test_api_model():
     assert model.ref_collection[-1].id == 1337
     assert model.ref_collection[-1].string == 'foo'
 
-    try:
-        model.id = '5'
-        assert model.id == 5
+    model.id = '5'
+    assert model.id == 5
+    with pytest.raises(ValueError):
         model.id = 'test'
-        assert False
-    except Exception as e:
-        assert isinstance(e, ValueError)
 
-    model.string = 5
-    assert model.string == '5'
+    model.id_doesnt_raise = 'test'
+    assert model.id_doesnt_raise is None
 
-    try:
+    with pytest.raises(ValueError):
+        model.string = 5
+
+    model.string_doesnt_raise = 5
+    assert model.string_doesnt_raise == '5'
+
+    with pytest.raises(ValueError):
         model.floating_point = 'test'
-        assert False
-    except Exception as e:
-        assert isinstance(e, ValueError)
 
-    try:
+    model.floating_point_doesnt_raise = 'test'
+    assert model.floating_point_doesnt_raise is None
+
+    with pytest.raises(ValueError):
         model.func = lambda x: x + 1
         as_dict = model._as_json
-    except Exception as e:
-        assert isinstance(e, ValueError)
 
-    try:
-        model.binary = requests.get('https://cataas.com/cat').content
-        as_dict = model._as_json
-    except Exception as e:
-        if RestResponse.utils.PYTHON3:
-            assert isinstance(e, ValueError)
-        else:
-            assert isinstance(e, UnicodeDecodeError)
+    model.binary = requests.get('https://cataas.com/cat').content
+    if RestResponse.utils.PYTHON3:
+        with pytest.raises(ValueError):
+            as_dict = model._as_json
+    else:
+        with pytest.raises(UnicodeDecodeError):
+            as_dict = model._as_json
 
-    try:
+    with pytest.raises(ValueError):
         model.int_collection.append('test')
-    except Exception as e:
-        assert isinstance(e, ValueError)
 
-    try:
+    with pytest.raises(ValueError):
         model.ref_collection.append('test')
-    except Exception as e:
-        assert isinstance(e, ValueError)
 
     Model.__opts__.update({
         'encode_binary': True,

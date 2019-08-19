@@ -64,9 +64,14 @@ def istext(s, text_characters="".join(map(chr, range(32, 127))) + "\n\r\t\b", th
 def encode_item(item, encode_binary=True, encode_callable=True, **kwargs):
     if isinstance(item, Decimal):
         return float(item)
-    elif isinstance(item, datetime) or isinstance(item, date):
+    elif isinstance(item, datetime):
         if 'encode_datetime' in kwargs and callable(kwargs.get('encode_datetime')):
             return kwargs.get('encode_datetime')(item)
+        else:
+            return item.isoformat()
+    elif isinstance(item, date):
+        if 'encode_date' in kwargs and callable(kwargs.get('encode_date')):
+            return kwargs.get('encode_date')(item)
         else:
             return item.isoformat()
     elif encode_callable and callable(item):

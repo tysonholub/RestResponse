@@ -1,7 +1,8 @@
 import json
 import simplejson
 import six
-from datetime import datetime
+import warnings
+from datetime import datetime, date
 from sqlalchemy.ext.mutable import Mutable
 from RestResponse import utils
 
@@ -413,6 +414,7 @@ class ApiModel(object):
         'decode_binary': False,
         'decode_callable': False,
         'encode_datetime': lambda x: datetime.strftime(x, '%Y-%m-%dT%H:%M:%SZ'),
+        'encode_date': lambda x: datetime.strftime(x, '%Y-%m-%d'),
         '_overrides': [],
     }
 
@@ -442,17 +444,105 @@ class ApiModel(object):
     def _as_json(self):
         return self._data()
 
-    def _format_datetime(self, d, format='%Y-%m-%dT%H:%M:%SZ'):
-        if not isinstance(d, datetime):
+    def _set_datetime(self, d, format='%Y-%m-%dT%H:%M:%SZ'):
+        return self._format_datetime(d, format=format, raises_value_error=True)
+
+    def _get_datetime(self, d, format='%Y-%m-%dT%H:%M:%SZ'):
+        return self._format_datetime(d, format=format, raises_value_error=False)
+
+    def _format_datetime(self, d, format='%Y-%m-%dT%H:%M:%SZ', raises_value_error=False):
+        if not isinstance(d, datetime) or not isinstance(d, date):
             try:
                 return datetime.strptime(d, format)
             except ValueError:
-                return None
+                if raises_value_error:
+                    raise
+                else:
+                    warnings.warn('Value must be date or datetime')
+                    return None
         else:
             return d
 
-    def _format_string(self, s):
-        return '%s' % s
+    def _set_date(self, d, format='%Y-%m-%d'):
+        return self._format_date(d, format=format, raises_value_error=True)
+
+    def _get_date(self, d, format='%Y-%m-%d'):
+        return self._format_date(d, format=format, raises_value_error=False)
+
+    def _format_date(self, d, format='%Y-%m-%d', raises_value_error=False):
+        if not isinstance(d, date):
+            try:
+                return datetime.strptime(d, format)
+            except ValueError:
+                if raises_value_error:
+                    raise
+                else:
+                    warnings.warn('Value must be date')
+                    return None
+        else:
+            return d
+
+    def _set_string(self, s):
+        return self._format_string(s, raises_value_error=True)
+
+    def _get_string(self, s):
+        return self._format_string(s, raises_value_error=False)
+
+    def _format_string(self, s, raises_value_error=False):
+        if (
+            raises_value_error and (
+                utils.PYTHON3 and not isinstance(s, str)
+                or not utils.PYTHON3 and not isinstance(s, str) and not isinstance(s, unicode)
+            )
+        ):
+            raise ValueError('Value must be str')
+        return '%s' % (s or '')
+
+    def _set_float(self, f):
+        return self._format_float(f, raises_value_error=True)
+
+    def _get_float(self, f):
+        return self._format_float(f, raises_value_error=False)
+
+    def _format_float(self, f, raises_value_error=False):
+        try:
+            return float(f)
+        except (ValueError, TypeError):
+            if raises_value_error:
+                raise
+            else:
+                warnings.warn('Value must be float')
+                return None
+
+    def _set_int(self, i):
+        return self._format_int(i, raises_value_error=True)
+
+    def _get_int(self, i):
+        return self._format_int(i, raises_value_error=False)
+
+    def _format_int(self, i, raises_value_error=False):
+        try:
+            return int(i)
+        except (ValueError, TypeError):
+            if raises_value_error:
+                raise
+            else:
+                warnings.warn('Value must be integer')
+                return None
+
+    def set_bool(self, b):
+        return self._format_bool(b, raises_value_error=True)
+
+    def get_bool(self, b):
+        return self._format_bool(b, raises_value_error=False)
+
+    def _format_bool(self, b, raises_value_error=False):
+        if (
+            raises_value_error
+            and not isinstance(b, bool)
+        ):
+            raise ValueError('Value must be bool')
+        return b in [True, 'True', 'true', '1', 1]
 
 
 class ApiCollection(RestList):
