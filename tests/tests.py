@@ -286,6 +286,15 @@ def test_api_model():
         '_bar': 'foo'
     })
 
+    as_dict = model._as_json
+    assert as_dict['id'] == 5
+    assert as_dict['string'] == 'foo'
+    assert as_dict['floating_point'] == float(4.0)
+    assert as_dict['date_time'] == Model.__opts__['encode_datetime'](d)
+    assert as_dict['date'] == Model.__opts__['encode_date'](d2)
+
+    model = Model(as_dict)
+
     assert 'foo' not in model._data
     assert 'foo' not in model.ref._data
     assert '_bar' not in model._data
@@ -301,7 +310,7 @@ def test_api_model():
     assert isinstance(model.floating_point, float)
     assert model.floating_point == float(4.0)
     assert isinstance(model.date_time, datetime)
-    assert model.date_time == d
+    assert model.date_time == d.replace(microsecond=0)
     assert isinstance(model.date, date)
     assert model.date == d2
     assert isinstance(model.ref, Ref)
@@ -311,12 +320,6 @@ def test_api_model():
     assert len(model.int_collection) == 3
     for ref in model.ref_collection:
         assert isinstance(ref, Ref)
-    as_dict = model._as_json
-    assert as_dict['id'] == 5
-    assert as_dict['string'] == 'foo'
-    assert as_dict['floating_point'] == float(4.0)
-    assert as_dict['date_time'] == Model.__opts__['encode_datetime'](d)
-    assert as_dict['date'] == Model.__opts__['encode_date'](d2)
 
     model.id = 10
     assert model.id == 10

@@ -3,6 +3,7 @@ import simplejson
 import six
 import warnings
 from datetime import datetime, date
+from dateutil import parser as dateutil_parser
 from sqlalchemy.ext.mutable import Mutable
 from RestResponse import utils
 
@@ -460,7 +461,8 @@ class ApiModel(object):
     def _format_datetime(self, d, format='%Y-%m-%dT%H:%M:%SZ', raises_value_error=False):
         if not isinstance(d, datetime) or not isinstance(d, date):
             try:
-                return datetime.strptime(d, format)
+                d = dateutil_parser.parse(d)
+                return datetime.strptime(d.strftime(format), format)
             except ValueError:
                 if raises_value_error:
                     raise
@@ -479,7 +481,8 @@ class ApiModel(object):
     def _format_date(self, d, format='%Y-%m-%d', raises_value_error=False):
         if not isinstance(d, date):
             try:
-                return datetime.strptime(d, format)
+                d = dateutil_parser.parse(d)
+                return datetime.strptime(d.strftime(format), format).date()
             except ValueError:
                 if raises_value_error:
                     raise
