@@ -278,13 +278,13 @@ class RestObject(RestResponseObj, dict):
         self.__data__ = {}
         self.changed()
 
-    def pop(self, name):
+    def pop(self, name, default=None):
         if name in self.__data__:
             value = self.__data__.pop(name)
             self.changed()
             return value
         else:
-            return None
+            return default
 
     def popitem(self):
         key_value = self.__data__.popitem()

@@ -29,6 +29,8 @@ def test_rest_obj():
     assert 'id' in dir(obj)
     assert len(obj) == 1
     assert obj.pop('id') == 1
+    assert obj.pop('foo') is None
+    assert obj.pop('foo', 'bar') == 'bar'
     assert len(obj) == 0
     obj.id = 1
     assert obj.popitem() == ('id', 1)
