@@ -288,6 +288,41 @@ def test_api_model():
         '_bar': 'foo'
     })
 
+    model2 = Model({
+        'id': 5,
+        'string': 'foo',
+        'floating_point': float(4.0),
+        'date_time': d,
+        'date': d2,
+        'int_collection': [1, 2, 3],
+        'ref_collection': [
+            {
+                'id': 1,
+                'string': 'string'
+            },
+            {
+                'id': 2,
+                'string': 'string'
+            }
+        ],
+        'foo': 'bar',
+        '_foo': 'bar',
+        '_bar': 'foo'
+    })
+
+    with pytest.raises(AssertionError):
+        assert model == model2
+
+    assert bool(model2.ref) is False
+
+    model2.ref = Ref({
+        'id': 5,
+        'string': 'string',
+        'foo': 'bar'
+    })
+
+    assert model == model2
+
     as_dict = model._as_json
     assert as_dict['id'] == 5
     assert as_dict['string'] == 'foo'

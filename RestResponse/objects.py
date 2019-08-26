@@ -426,6 +426,17 @@ class ApiModel(object):
         '_overrides': [],
     }
 
+    def __bool__(self):
+        return bool(self._data)
+
+    def __nonzero__(self):
+        return bool(self._data)
+
+    def __eq__(self, other):
+        if not isinstance(other, ApiModel):
+            return False
+        return self._data == other._data
+
     @property
     def _data(self):
         return self.__data

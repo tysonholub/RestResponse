@@ -2,7 +2,7 @@ from RestResponse import ApiModel, ApiCollection
 
 
 class Model(ApiModel):
-    def __init__(self, data):
+    def __init__(self, data=None):
         self._data = data
 
     @property
@@ -154,7 +154,7 @@ class Model(ApiModel):
 
 
 class Ref(ApiModel):
-    def __init__(self, data):
+    def __init__(self, data=None):
         self._data = data
 
     @property
@@ -175,7 +175,7 @@ class Ref(ApiModel):
 
 
 class OverridesModel(ApiModel):
-    def __init__(self, data):
+    def __init__(self, data=None):
         self.__opts__['_overrides'] = ['_foo']
         self._data = data
 
