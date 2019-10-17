@@ -3,15 +3,16 @@ workflows:
   version: 2
   test:
     jobs:
-      - test-3.7
-      - test-3.6
-      - test-3.5
-      - test-3.4
       - test-2.7
+      - test-3.4
+      - test-3.5
+      - test-3.6
+      - test-3.7
+      - test-3.8
 jobs:
-  test-3.7: &test-template
+  test-2.7: &test-template
     docker:
-      - image: circleci/python:3.7.3-stretch
+      - image: circleci/python:2.7.16-buster
     working_directory: ~/repo
     steps:
       - checkout
@@ -38,19 +39,23 @@ jobs:
       - store_artifacts:
           path: test-reports
           destination: test-reports
-  test-3.6:
-    <<: *test-template
-    docker:
-      - image: circleci/python:3.6.8-stretch
-  test-3.5:
-    <<: *test-template
-    docker:
-      - image: circleci/python:3.5.7-stretch
   test-3.4:
     <<: *test-template
     docker:
       - image: circleci/python:3.4.9-stretch
-  test-2.7:
+  test-3.5:
     <<: *test-template
     docker:
-      - image: circleci/python:2.7.16-stretch
+      - image: circleci/python:3.5.7-buster
+  test-3.6:
+    <<: *test-template
+    docker:
+      - image: circleci/python:3.6.9-buster
+  test-3.7:
+    <<: *test-template
+    docker:
+      - image: circleci/python:3.7.4-buster
+  test-3.8:
+    <<: *test-template
+    docker:
+      - image: circleci/python:3.8.0-buster
