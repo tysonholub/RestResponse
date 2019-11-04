@@ -213,7 +213,7 @@ class RestList(RestResponseObj, list):
 
     def append(self, item):
         if not (isinstance(item, RestResponseObj) or isinstance(item, NoneProp)):
-            utils.encode_item(item, **self.__opts__)
+            item = utils.encode_item(item, **self.__opts__)
         super(RestList, self).append(RestResponse.parse(item, parent=self))
         self.changed()
 
@@ -223,7 +223,7 @@ class RestList(RestResponseObj, list):
 
     def insert(self, index, item):
         if not (isinstance(item, RestResponseObj) or isinstance(item, NoneProp)):
-            utils.encode_item(item, **self.__opts__)
+            item = utils.encode_item(item, **self.__opts__)
         super(RestList, self).insert(index, RestResponse.parse(item, parent=self))
         self.changed()
 

@@ -82,11 +82,6 @@ def encode_item(item, encode_binary=True, encode_callable=True, **kwargs):
         or PYTHON3 and isinstance(item, bytes) and not istext(item)
     ):
         return _encode_binary(item)
-    elif (
-        not PYTHON3 and isinstance(item, unicode)
-        or PYTHON3 and isinstance(item, str)
-    ):
-        return item.encode('utf-8')
     elif PYTHON3 and isinstance(item, bytes) and istext(item):
         return item.decode('utf-8')
     return item

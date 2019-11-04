@@ -139,6 +139,12 @@ def test_rest_list():
     with pytest.raises(IndexError):
         lst[100] = 'foo'
 
+    data = {
+        'lst': ['test', 'encodedness']
+    }
+    obj = RestResponse.parse(data)
+    assert obj.lst == data['lst']
+
 
 def test_pretty_print():
     r = requests.get('http://jsonplaceholder.typicode.com/users/1')
