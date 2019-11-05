@@ -4,7 +4,7 @@ from RestResponse import RestResponse, RestResponseObj, RestEncoder, utils
 
 
 class RestResponseEncodedObj(types.TypeDecorator):
-    impl = types.Binary
+    impl = types.LargeBinary
 
     def process_bind_param(self, value, dialect):
         if value:
