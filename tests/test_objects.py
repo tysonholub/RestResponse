@@ -4,13 +4,12 @@ import requests
 from datetime import datetime, date
 from decimal import Decimal
 import json
-from .models import Model, Ref, OverridesModel
+from tests.models import DBModel, Model, Ref, OverridesModel
 
 
 def test_none_prop():
     obj = RestResponse.parse({})
     assert not obj.missing_prop
-    assert not obj.missing_prop_call()
     obj.none_prop['test'] = 'this'
     assert obj.none_prop.test == 'this'
     assert isinstance(obj.prop, RestResponse.NoneProp)
@@ -20,13 +19,12 @@ def test_none_prop():
         raise AssertionError('NoneProp should have nothing to yield')
 
 
-def test_rest_obj():
+def test_rest_obj(binary):
     obj = RestResponse.parse({})
     assert isinstance(obj, RestResponse.RestObject)
     obj.id = 1
     assert 'id' in obj
     assert 'id' in obj.keys()
-    assert 'id' in dir(obj)
     assert len(obj) == 1
     assert obj.pop('id') == 1
     assert obj.pop('foo') is None
@@ -39,18 +37,17 @@ def test_rest_obj():
     assert isinstance(obj.nested, RestResponse.RestObject)
     assert 'prop' in obj.nested
     assert 'prop' in obj.nested.keys()
-    assert 'prop' in dir(obj.nested)
     obj.update(RestResponse.parse({
         'test': 'this',
-        'callable': lambda x: x+1,
-        'binary': requests.get('https://cataas.com/cat').content
+        'callable': lambda x: x + 1,
+        'binary': binary
     }))
     assert obj.test == 'this'
     assert obj.callable(1) == 2
     assert not RestResponse.utils.istext(obj.binary)
     obj.restobj = RestResponse.parse({
         'test': 'this',
-        'callable': lambda x: x+1
+        'callable': lambda x: x + 1
     })
     assert obj.restobj.test == 'this'
     assert obj.restobj.callable(1) == 2
@@ -67,7 +64,7 @@ def test_rest_obj():
 
 def test_callable():
     base = RestResponse.parse({
-        'trigger': lambda x: x+1
+        'trigger': lambda x: x + 1
     })
     t = RestResponse.parse(base())
     assert t.trigger(1) == 2
@@ -75,8 +72,7 @@ def test_callable():
     assert t.trigger(1) == 2
 
 
-def test_binary():
-    binary = requests.get('https://cataas.com/cat').content
+def test_binary(binary):
     base = RestResponse.parse({
         'binary': binary
     })
@@ -86,7 +82,7 @@ def test_binary():
     assert t.binary == binary
 
 
-def test_rest_list():
+def test_rest_list(binary):
     lst = RestResponse.parse([])
     assert isinstance(lst, RestResponse.RestList)
     lst.append('item')
@@ -100,27 +96,27 @@ def test_rest_list():
     lst.append(b'byte string')
     assert u'\U0001f44d' in lst
     assert b'byte string' in lst
-    assert lst.pop() == 'byte string'
+    assert lst.pop() == b'byte string'
     assert lst.pop() == u'\U0001f44d'
     lst.append(RestResponse.parse({
         'test': 'RestObj',
-        'callable': lambda x: x+1,
-        'binary': requests.get('https://cataas.com/cat').content,
+        'callable': lambda x: x + 1,
+        'binary': binary,
         'unicode': u'\U0001f44d',
         'bytes': b'byte string'
     }))
     assert lst[-1].test == 'RestObj'
     assert lst[-1].callable(1) == 2
     assert lst[-1].unicode == u'\U0001f44d'
-    assert lst[-1].bytes == 'byte string'
+    assert lst[-1].bytes == b'byte string'
     assert not RestResponse.utils.istext(lst[-1].binary)
     lst.append(RestResponse.parse([lst[-1]]))
     assert isinstance(lst[-1], RestResponse.RestList)
     assert isinstance(lst[-1][-1], RestResponse.RestObject)
     lst.insert(0, RestResponse.parse({
         'test': 'RestObj',
-        'callable': lambda x: x+1,
-        'binary': requests.get('https://cataas.com/cat').content,
+        'callable': lambda x: x + 1,
+        'binary': binary,
         'unicode': u'\U0001f44d'
     }))
     assert lst[0].test == 'RestObj'
@@ -128,7 +124,7 @@ def test_rest_list():
     assert lst[0].unicode == u'\U0001f44d'
     assert not RestResponse.utils.istext(lst[0].binary)
     lst.append(lst[0].none_prop)
-    assert lst()[-1] is None
+    assert lst()[-1] is not None
 
     lst[0] = {
         'id': 1,
@@ -146,22 +142,26 @@ def test_rest_list():
     assert obj.lst == data['lst']
 
 
-def test_pretty_print():
+def test_pretty_print(requests_mock, user_text):
+    requests_mock.get('http://jsonplaceholder.typicode.com/users/1', text=user_text)
     r = requests.get('http://jsonplaceholder.typicode.com/users/1')
     user = RestResponse.parse(r.json())
     assert len(user.pretty_print().split('\n')) == len(r.text.split('\n'))
 
 
-def test_encode_on_request():
+def test_encode_on_request(binary, requests_mock, user_text):
+    requests_mock.get('http://jsonplaceholder.typicode.com/users/1', text=user_text)
     r = requests.get('http://jsonplaceholder.typicode.com/users/1')
     user = RestResponse.parse(r.json())
     user.update({
         'name': 'Test New Name',
         'new_field': 'Test New Field',
-        'binary': requests.get('https://cataas.com/cat').content,
+        'binary': binary,
         'callable': lambda x: x + 1,
         'unicode': u'\U0001f44d'
     })
+
+    requests_mock.put('http://jsonplaceholder.typicode.com/users/{0}'.format(user.id), text=repr(user))
     r = requests.put('http://jsonplaceholder.typicode.com/users/{0}'.format(user.id), json=user)
     assert r.ok
     r = requests.put('http://jsonplaceholder.typicode.com/users/{0}'.format(user.id), json=user())
@@ -179,11 +179,10 @@ def test_encode_on_request():
     assert len(user) == 0
 
 
-def test_supported_encoder_types():
+def test_supported_encoder_types(binary):
     d1 = datetime.utcnow()
     d2 = d1.date()
     decimal = Decimal('3.1459')
-    binary = requests.get('https://cataas.com/cat').content
 
     data = RestResponse.parse({
         'datetime': d1,
@@ -197,7 +196,8 @@ def test_supported_encoder_types():
 
     assert data.datetime == d1
     assert data.date == d2
-    assert data.decimal == float(Decimal('3.1459'))
+    assert isinstance(data.decimal, Decimal)
+    assert float(data.decimal) == float(Decimal('3.1459'))
     assert data.binary == binary
     assert data.callable(1) == 2
     assert data.unicode == u'\U0001f44d'
@@ -208,21 +208,16 @@ def test_supported_encoder_types():
     assert RestResponse.utils._decode_binary(raw['binary']) == binary
     assert raw['callable'].startswith('__callable__: ')
     func = RestResponse.utils._decode_callable(raw['callable'])
-    if not RestResponse.utils.PYTHON3:
-        assert func.func_code == data.callable.func_code
-    else:
-        assert func.__code__ == data.callable.__code__
+    assert func.__code__ == data.callable.__code__
     assert func(1) == 2
     assert raw['ascii_unicode'] == 'test'
 
 
-def test_orm_sqlalchemy():
-    response = RestResponse.orm.sqlalchemy.RESTResponse()
+def test_orm_sqlalchemy(db, db_model, binary):
     d1 = datetime.utcnow()
     d2 = d1.date()
     decimal = Decimal('3.1459')
-    binary = requests.get('https://cataas.com/cat').content
-    data = RestResponse.parse({
+    db_model.data = RestResponse.parse({
         'datetime': d1,
         'date': d2,
         'decimal': decimal,
@@ -231,23 +226,23 @@ def test_orm_sqlalchemy():
         'unicode': u'\U0001f44d',
         'ascii_unicode': u'test'
     })
-    bind_param = response.process_bind_param(data, dialect=None)
-    if RestResponse.utils.PYTHON3:
-        assert isinstance(bind_param, bytes)
-    else:
-        assert isinstance(bind_param, str)
-    result_value = response.process_result_value(bind_param, dialect=None)
 
-    assert result_value.datetime == RestResponse.utils.encode_item(d1)
-    assert result_value.date == RestResponse.utils.encode_item(d2)
-    assert result_value.decimal == float(Decimal('3.1459'))
-    assert result_value.binary == binary
-    assert result_value.callable(1) == 2
-    assert result_value.unicode == u'\U0001f44d'
-    assert result_value.ascii_unicode == u'test'
+    db.session.add(db_model)
+    db.session.commit()
+
+    session = db.create_scoped_session(dict(expire_on_commit=False))
+    committed = session.query(DBModel).first()
+
+    assert committed.data.datetime == RestResponse.utils.encode_item(d1)
+    assert committed.data.date == RestResponse.utils.encode_item(d2)
+    assert committed.data.decimal == float(Decimal('3.1459'))
+    assert committed.data.binary == binary
+    assert committed.data.callable(1) == 2
+    assert committed.data.unicode == u'\U0001f44d'
+    assert committed.data.ascii_unicode == u'test'
 
 
-def test_api_model():
+def test_api_model(binary):
     model = OverridesModel({
         '_foo': 'bar',
         'foo': 'bar'
@@ -330,6 +325,7 @@ def test_api_model():
     assert model == model2
 
     as_dict = model._as_json
+    repr(as_dict)
     assert as_dict['id'] == 5
     assert as_dict['string'] == 'foo'
     assert as_dict['floating_point'] == float(4.0)
@@ -345,10 +341,7 @@ def test_api_model():
     assert model._foo == 'bar'
     assert isinstance(model.id, int)
     assert model.id == 5
-    if RestResponse.utils.PYTHON3:
-        assert isinstance(model.string, str)
-    else:
-        assert isinstance(model.string, unicode)
+    assert isinstance(model.string, str)
     assert model.string == 'foo'
     assert isinstance(model.floating_point, float)
     assert model.floating_point == float(4.0)
@@ -404,13 +397,10 @@ def test_api_model():
         model.func = lambda x: x + 1
         as_dict = model._as_json
 
-    model.binary = requests.get('https://cataas.com/cat').content
-    if RestResponse.utils.PYTHON3:
-        with pytest.raises(ValueError):
-            as_dict = model._as_json
-    else:
-        with pytest.raises(UnicodeDecodeError):
-            as_dict = model._as_json
+    model.binary = binary
+
+    with pytest.raises(ValueError):
+        as_dict = model._as_json
 
     with pytest.raises(ValueError):
         model.int_collection.append('test')
@@ -426,7 +416,7 @@ def test_api_model():
     })
 
     model = Model({
-        'binary': requests.get('https://cataas.com/cat').content,
+        'binary': binary,
         'func': lambda x: x + 1
     })
 
@@ -435,15 +425,11 @@ def test_api_model():
     assert RestResponse.utils._decode_binary(as_dict.get('binary')) == model.binary
 
     func = RestResponse.utils._decode_callable(as_dict.get('func'))
-    if not RestResponse.utils.PYTHON3:
-        assert func.func_code == model.func.func_code
-    else:
-        assert func.__code__ == model.func.__code__
+    assert func.__code__ == model.func.__code__
 
 
 def test_api_collection():
-    models = RestResponse.ApiCollection(Model)
-    models.extend([{
+    models = RestResponse.ApiCollection(Model, [{
         'id': 5,
         'string': 'foo',
         'floating_point': float(4.0),

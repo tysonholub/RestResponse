@@ -21,9 +21,9 @@ setup(
     packages=find_packages(exclude=['tests', 'tests.*']),
     install_requires=[
         'simplejson',
-        'six',
         'SQLAlchemy',
         'cloudpickle',
-        'python-dateutil'
+        'python-dateutil',
+        'python-autoviv'
     ]
 )

@@ -1,4 +1,15 @@
 from RestResponse import ApiModel, ApiCollection
+from RestResponse.orm.sqlalchemy import RESTResponse
+from tests import test_db
+
+
+class DBModel(test_db.Model):
+    id = test_db.Column(test_db.Integer, primary_key=True)
+    data = test_db.Column(RESTResponse(), nullable=True)
+
+    def __init__(self, data=None):
+        data = data or {}
+        self.data = data
 
 
 class Model(ApiModel):
@@ -112,13 +123,12 @@ class Model(ApiModel):
     @property
     def int_collection(self):
         if not self._data.int_collection:
-            self._data.int_collection = ApiCollection(int)
+            self._data.int_collection = ApiCollection(self._set_int)
         return self._data.int_collection
 
     @int_collection.setter
     def int_collection(self, int_collection):
-        self._data.int_collection = ApiCollection(self._set_int)
-        self._data.int_collection.extend(int_collection)
+        self._data.int_collection = ApiCollection(self._set_int, int_collection)
 
     @property
     def int_collection_doesnt_raise(self):
@@ -128,8 +138,9 @@ class Model(ApiModel):
 
     @int_collection_doesnt_raise.setter
     def int_collection_doesnt_raise(self, int_collection):
-        self._data.int_collection_doesnt_raise = ApiCollection(self._format_int, raises_value_error=False)
-        self._data.int_collection_doesnt_raise.extend(int_collection)
+        self._data.int_collection_doesnt_raise = ApiCollection(
+            self._format_int, int_collection, raises_value_error=False
+        )
 
     @property
     def ref(self):
@@ -149,8 +160,7 @@ class Model(ApiModel):
 
     @ref_collection.setter
     def ref_collection(self, ref_collection):
-        self._data.ref_collection = ApiCollection(Ref)
-        self._data.ref_collection.extend(ref_collection)
+        self._data.ref_collection = ApiCollection(Ref, ref_collection)
 
 
 class Ref(ApiModel):

@@ -8,5 +8,5 @@ loads = RestResponse.loads
 
 __all__ = [
     'RestEncoder', 'RestResponse', 'RestObject', 'RestList', 'NoneProp', 'parse', 'loads', 'orm',
-    'RestResponseObj'
+    'RestResponseObj', 'ApiModel', 'ApiCollection'
 ]

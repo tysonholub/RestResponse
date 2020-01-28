@@ -3,7 +3,9 @@ simplejson
 six
 cloudpickle
 SQLAlchemy
+Flask-SQLAlchemy
 flake8
 pytest
 requests
 tox
+python-autoviv
