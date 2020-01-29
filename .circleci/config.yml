@@ -3,46 +3,30 @@ workflows:
   version: 2
   test:
     jobs:
-      - test-2.7
       - test-3.4
       - test-3.5
       - test-3.6
       - test-3.7
       - test-3.8
 jobs:
-  test-2.7: &test-template
+  test-3.4: &test-template
     docker:
-      - image: circleci/python:2.7.16-buster
+      - image: circleci/python:3.4.9-stretch
     working_directory: ~/repo
     steps:
       - checkout
-      - restore_cache:
-          keys:
-          - v1-dependencies-{{ checksum "dev-requirements.txt" }}
-          - v1-dependencies-
       - run:
           name: Install dependencies
           command: |
-            rm -rf ./venv
-            python -m venv venv || virtualenv venv
-            . venv/bin/activate
-            pip install -r dev-requirements.txt
-      - save_cache:
-          paths:
-            - ./venv
-          key: v1-dependencies-{{ checksum "dev-requirements.txt" }}
+            pip install pipenv
+            pipenv install --dev --python `which python`
       - run:
           name: Run tests
           command: |
-            . venv/bin/activate
-            pytest -s tests/tests.py
+            ./test.sh
       - store_artifacts:
           path: test-reports
           destination: test-reports
-  test-3.4:
-    <<: *test-template
-    docker:
-      - image: circleci/python:3.4.9-stretch
   test-3.5:
     <<: *test-template
     docker:

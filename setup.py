@@ -6,7 +6,7 @@ def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 
-__version__ = '2.2.6'
+__version__ = '3.0.0'
 
 setup(
     name='RestResponse',
@@ -21,9 +21,9 @@ setup(
     packages=find_packages(exclude=['tests', 'tests.*']),
     install_requires=[
         'simplejson',
-        'SQLAlchemy',
-        'cloudpickle',
+        'python-autoviv',
         'python-dateutil',
-        'python-autoviv'
+        'sqlalchemy',
+        'cloudpickle',
     ]
 )

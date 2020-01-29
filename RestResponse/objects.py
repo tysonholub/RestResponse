@@ -1,12 +1,13 @@
 import json
-import simplejson
 import warnings
 from datetime import datetime, date
 
 import autoviv
 from autoviv import NoneProp
+import simplejson
 from dateutil import parser as dateutil_parser
 from sqlalchemy.ext.mutable import Mutable
+
 from RestResponse import utils
 
 

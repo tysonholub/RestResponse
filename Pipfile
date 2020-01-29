@@ -1,0 +1,17 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+pytest = "*"
+pytest-flake8 = "*"
+requests-mock = "*"
+flask-sqlalchemy = "*"
+
+[packages]
+simplejson = "*"
+python-autoviv = "*"
+python-dateutil = "*"
+sqlalchemy = "*"
+cloudpickle = "*"
