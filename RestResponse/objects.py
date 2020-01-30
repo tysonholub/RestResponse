@@ -31,8 +31,21 @@ class RestEncoder(json.JSONEncoder):
         setattr(self, 'default', _encode_hook({}))
 
 
+class RestEncoderSimple(simplejson.JSONEncoder):
+    def __init__(self, *args, **kwargs):
+        super(RestEncoderSimple, self).__init__(*args, **kwargs)
+        setattr(self, 'default', _encode_hook({}))
+
+    def iterencode(self, o, *args, **kwargs):
+        try:
+            return super(RestEncoderSimple, self).iterencode(o, *args, **kwargs)
+        except Exception:
+            # this could use a better solution
+            return super(RestEncoderSimple, self).iterencode(json.loads(str(o)), *args, **kwargs)
+
+
 json._default_encoder = RestEncoder()
-simplejson._default_encoder = RestEncoder()
+simplejson._default_encoder = RestEncoderSimple()
 
 
 class RestResponseObj(Mutable, object):
