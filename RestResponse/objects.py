@@ -361,7 +361,7 @@ class ApiCollection(RestList):
 
     @property
     def _as_json(self):
-        return self._data()
+        return json.loads(json.dumps(self, default=_encode_hook(self.__opts__)))
 
     def append(self, item):
         self.insert(len(self), item)
