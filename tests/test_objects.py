@@ -141,6 +141,11 @@ def test_rest_list(binary):
     obj = RestResponse.parse(data)
     assert obj.lst == data['lst']
 
+    lst = RestResponse.parse(['foo'])
+    lst[-1] = ['foo', {'foo': 'bar'}]
+    assert isinstance(lst[-1], RestResponse.RestList)
+    assert isinstance(lst[-1][-1], RestResponse.RestObject)
+
 
 def test_pretty_print(requests_mock, user_text):
     requests_mock.get('http://jsonplaceholder.typicode.com/users/1', text=user_text)

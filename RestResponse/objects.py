@@ -83,12 +83,14 @@ class RestList(RestResponseObj, autoviv.List):
     def pretty_print(self, indent=4):
         return autoviv.pprint(self, indent=indent, cls=RestEncoder)
 
-    def __setitem__(self, index, value):
-        if index >= 0 and index < len(self):
-            self.pop(index)
-            self.insert(index, value)
-        else:
-            raise IndexError('list index out of range')
+    def __setitem__(self, index, item):
+        if isinstance(item, NoneProp):
+            return
+
+        item = RestResponse.parse(item)
+
+        super(RestList, self).__setitem__(index, item)
+        self.changed()
 
     def append(self, item):
         self.insert(len(self), item)
