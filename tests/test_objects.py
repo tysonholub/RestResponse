@@ -246,6 +246,30 @@ def test_orm_sqlalchemy(db, db_model, binary):
     assert committed.data.unicode == u'\U0001f44d'
     assert committed.data.ascii_unicode == u'test'
 
+    db_model.data = {}
+    db.session.commit()
+
+    session = db.create_scoped_session(dict(expire_on_commit=False))
+    committed = session.query(DBModel).first()
+
+    assert isinstance(committed.data, RestResponse.RestObject)
+
+    db_model.data = []
+    db.session.commit()
+
+    session = db.create_scoped_session(dict(expire_on_commit=False))
+    committed = session.query(DBModel).first()
+
+    assert isinstance(committed.data, RestResponse.RestList)
+
+    db_model.data = None
+    db.session.commit()
+
+    session = db.create_scoped_session(dict(expire_on_commit=False))
+    committed = session.query(DBModel).first()
+
+    assert isinstance(committed.data, RestResponse.RestObject)
+
 
 def test_api_model(binary):
     model = OverridesModel({
