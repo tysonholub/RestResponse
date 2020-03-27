@@ -1,5 +1,6 @@
 from .objects import (
-    RestEncoder, RestResponse, RestObject, RestList, NoneProp, RestResponseObj, ApiModel, ApiCollection
+    RestEncoder, RestResponse, RestObject, RestList, NoneProp, RestResponseObj, ApiModel, ApiCollection,
+    RestEncoderSimple
 )
 from . import orm
 
@@ -8,5 +9,5 @@ loads = RestResponse.loads
 
 __all__ = [
     'RestEncoder', 'RestResponse', 'RestObject', 'RestList', 'NoneProp', 'parse', 'loads', 'orm',
-    'RestResponseObj', 'ApiModel', 'ApiCollection'
+    'RestResponseObj', 'ApiModel', 'ApiCollection', 'RestEncoderSimple'
 ]

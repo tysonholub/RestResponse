@@ -13,8 +13,12 @@ from RestResponse import utils
 
 def _encode_hook(opts):
     def _default(o):
+        if isinstance(o, RestObject):
+            return {k: _default(v) for k, v in o.items()}
+        elif isinstance(o, RestList) or isinstance(o, ApiCollection):
+            return [_default(x) for x in o]
         if isinstance(o, ApiModel):
-            return o._data
+            return _default(o._data)
         return utils.encode_item(o, **opts)
     return _default
 

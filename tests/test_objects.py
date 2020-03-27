@@ -503,3 +503,29 @@ def test_api_collection():
         m.ref_collection.append(ref)
         assert m.ref_collection[-1].id == ref.id
         assert m.ref_collection[-1].string == ref.string
+
+
+def test_default():
+    obj = RestResponse.parse({
+        'callable': lambda x: x + 1
+    })
+
+    data = RestResponse.RestEncoder().default(obj)
+    assert data['callable'].startswith('__callable__')
+    assert RestResponse.utils.decode_item(data['callable'])(2) == 3
+
+    data = RestResponse.RestEncoderSimple().default(obj)
+    assert data['callable'].startswith('__callable__')
+    assert RestResponse.utils.decode_item(data['callable'])(2) == 3
+
+    obj = RestResponse.parse([
+        lambda x: x + 1
+    ])
+
+    data = RestResponse.RestEncoder().default(obj)
+    assert data[0].startswith('__callable__')
+    assert RestResponse.utils.decode_item(data[0])(2) == 3
+
+    data = RestResponse.RestEncoderSimple().default(obj)
+    assert data[0].startswith('__callable__')
+    assert RestResponse.utils.decode_item(data[0])(2) == 3
