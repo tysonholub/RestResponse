@@ -6,8 +6,9 @@ from . import orm
 
 parse = RestResponse.parse
 loads = RestResponse.loads
+dumps = RestResponse.dumps
 
 __all__ = [
-    'RestEncoder', 'RestResponse', 'RestObject', 'RestList', 'NoneProp', 'parse', 'loads', 'orm',
+    'RestEncoder', 'RestResponse', 'RestObject', 'RestList', 'NoneProp', 'parse', 'loads', 'dumps', 'orm',
     'RestResponseObj', 'ApiModel', 'ApiCollection', 'RestEncoderSimple'
 ]

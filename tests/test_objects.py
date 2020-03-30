@@ -531,3 +531,14 @@ def test_default():
     assert RestResponse.utils.decode_item(data[0])(2) == 3
 
     assert obj.__json__() == data
+
+
+def test_dumps(binary):
+    obj = RestResponse.parse({
+        'callable': lambda x: x + 1,
+        'binary': binary,
+        'foo': 'bar',
+        'x': 1
+    })
+
+    assert RestResponse.dumps(obj) == str(obj)

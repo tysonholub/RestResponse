@@ -220,9 +220,16 @@ class RestResponse(object):
         try:
             data = json.loads(data, object_hook=_decode_hook, **kwargs)
         except Exception:
-            raise ValueError('RestResponse data must be JSON deserializable')
+            raise ValueError('RestResponse.loads data must be JSON deserializable')
 
         return RestResponse.parse(data)
+
+    @staticmethod
+    def dumps(data, **kwargs):
+        try:
+            return json.dumps(data, cls=RestEncoder, **kwargs)
+        except Exception:
+            raise ValueError('RestResponse.dumps data must be JSON serializable')
 
 
 class ApiModel(object):
