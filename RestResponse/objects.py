@@ -75,6 +75,9 @@ class RestResponseObj(Mutable, object):
     def __call__(self):
         return self
 
+    def __json__(self, options=None):
+        return _encode_hook(options or self.__opts__)(self)
+
 
 class RestList(RestResponseObj, autoviv.List):
     def __init__(self, iterable=()):

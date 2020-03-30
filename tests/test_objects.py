@@ -529,3 +529,5 @@ def test_default():
     data = RestResponse.RestEncoderSimple().default(obj)
     assert data[0].startswith('__callable__')
     assert RestResponse.utils.decode_item(data[0])(2) == 3
+
+    assert obj.__json__() == data
