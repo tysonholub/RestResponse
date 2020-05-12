@@ -191,6 +191,10 @@ class RestObject(RestResponseObj, autoviv.Dict):
     def update(self, *args, **kwargs):
         result = {}
         for k, v in dict(*args, **kwargs).items():
+            if isinstance(v, str) and (v.startswith('__callable__: ') or v.startswith('__binary__')):
+                v = utils.decode_item(v)
+            elif isinstance(v, bytes) and (v.startswith(b'__callable__: ') or v.startswith(b'__binary__')):
+                v = utils.decode_item(v)
             result[k] = RestResponse.parse(v)
 
         super(RestObject, self).update(**result)
