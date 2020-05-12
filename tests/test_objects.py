@@ -561,3 +561,18 @@ def test_parse(binary):
     assert callable(obj.callable) is True
     assert obj.callable(2) == 3
     assert isinstance(obj.binary, bytes)
+
+    data = RestResponse.parse([
+        lambda x: x + 1,
+        binary
+    ]).__json__()
+
+    assert isinstance(data[0], str)
+    assert isinstance(data[1], str)
+    assert data[0].startswith('__callable__') is True
+    assert data[1].startswith('__binary__') is True
+
+    obj = RestResponse.parse(data)
+    assert callable(obj[0]) is True
+    assert obj[0](2) == 3
+    assert isinstance(obj[1], bytes)
