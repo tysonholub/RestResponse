@@ -193,7 +193,7 @@ class RestObject(RestResponseObj, autoviv.Dict):
         for k, v in dict(*args, **kwargs).items():
             result[k] = RestResponse.parse(v)
 
-        super(RestObject, self).update(**result)
+        super(RestObject, self).update(result)
         self.changed()
 
 

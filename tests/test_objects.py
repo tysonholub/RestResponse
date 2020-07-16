@@ -576,3 +576,9 @@ def test_parse(binary):
     assert callable(obj[0]) is True
     assert obj[0](2) == 3
     assert isinstance(obj[1], bytes)
+
+
+def test_digit_keys():
+    data = RestResponse.parse({})
+    data[5] = 10
+    assert data.get(5) == 10

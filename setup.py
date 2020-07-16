@@ -6,7 +6,7 @@ def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 
-__version__ = '3.0.9'
+__version__ = '3.1.0'
 
 setup(
     name='RestResponse',
