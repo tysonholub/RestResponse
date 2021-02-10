@@ -29,6 +29,15 @@ def _decode_hook(obj):
     return obj
 
 
+def none_prop_getattr(self, key):
+    if key == '__clause_element__':
+        raise AttributeError(key)
+    return NoneProp(self, key)
+
+
+NoneProp.__getattr__ = none_prop_getattr
+
+
 class RestEncoder(json.JSONEncoder):
     def __init__(self, *args, **kwargs):
         super(RestEncoder, self).__init__(*args, **kwargs)

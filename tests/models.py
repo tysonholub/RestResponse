@@ -6,6 +6,7 @@ from tests import test_db
 class DBModel(test_db.Model):
     id = test_db.Column(test_db.Integer, primary_key=True)
     data = test_db.Column(RESTResponse(), nullable=True)
+    none_prop_test = test_db.Column(test_db.String, nullable=True)
 
     def __init__(self, data=None):
         data = data or {}

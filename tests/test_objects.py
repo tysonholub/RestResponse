@@ -1,9 +1,12 @@
+import json
+from datetime import datetime, date
+from decimal import Decimal
+
 import pytest
 import RestResponse
 import requests
-from datetime import datetime, date
-from decimal import Decimal
-import json
+from sqlalchemy.exc import StatementError
+
 from tests.models import DBModel, Model, Ref, OverridesModel
 
 
@@ -219,6 +222,14 @@ def test_supported_encoder_types(binary):
 
 
 def test_orm_sqlalchemy(db, db_model, binary):
+    with pytest.raises(StatementError) as e:
+        db_model.none_prop_test = db_model.data.test.none_prop
+        db.session.add(db_model)
+        db.session.commit()
+    assert 'Error binding parameter' in str(e.value)
+
+    db.session.rollback()
+
     d1 = datetime.utcnow()
     d2 = d1.date()
     decimal = Decimal('3.1459')
