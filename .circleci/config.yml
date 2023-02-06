@@ -8,6 +8,8 @@ workflows:
       - test-3.6
       - test-3.7
       - test-3.8
+      - test-3.9
+      - test-3.10
 jobs:
   test-3.4: &test-template
     docker:
@@ -43,3 +45,11 @@ jobs:
     <<: *test-template
     docker:
       - image: circleci/python:3.8.0-buster
+  test-3.9:
+    <<: *test-template
+    docker:
+      - image: circleci/python:3.9.0-buster
+  test-3.10:
+    <<: *test-template
+    docker:
+      - image: circleci/python:3.10.0-buster
