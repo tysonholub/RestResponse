@@ -1,3 +1,5 @@
 #!/bin/bash
 
-pipenv run python -m pytest --flake8
+set -e
+pipenv run flake8
+pipenv run python -m pytest

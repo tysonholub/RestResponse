@@ -1,6 +1,7 @@
 import os
 import pytest
 
+from tests import test_app
 from tests.models import DBModel, test_db
 
 TEST_PATH = os.path.dirname(__file__)
@@ -8,11 +9,12 @@ TEST_PATH = os.path.dirname(__file__)
 
 @pytest.fixture
 def db():
-    test_db.create_all()
-    test_db.session = test_db.create_scoped_session(dict(expire_on_commit=False))
-    yield test_db
-    test_db.session.flush()
-    test_db.drop_all()
+    with test_app.app_context():
+        test_db.create_all()
+        test_db.session = test_db._make_scoped_session(dict(expire_on_commit=False))
+        yield test_db
+        test_db.session.flush()
+        test_db.drop_all()
 
 
 @pytest.fixture

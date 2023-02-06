@@ -5,8 +5,9 @@ verify_ssl = true
 
 [dev-packages]
 pytest = "*"
-pytest-flake8 = "*"
-requests-mock = "*"
+flake8 = "*"
+requests = "==2.25.1"
+requests-mock = "==1.9.0"
 flask-sqlalchemy = "*"
 
 [packages]

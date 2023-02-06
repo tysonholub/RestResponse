@@ -246,7 +246,7 @@ def test_orm_sqlalchemy(db, db_model, binary):
     db.session.add(db_model)
     db.session.commit()
 
-    session = db.create_scoped_session(dict(expire_on_commit=False))
+    session = db._make_scoped_session(dict(expire_on_commit=False))
     committed = session.query(DBModel).first()
 
     assert committed.data.datetime == RestResponse.utils.encode_item(d1)
@@ -260,7 +260,7 @@ def test_orm_sqlalchemy(db, db_model, binary):
     db_model.data = {}
     db.session.commit()
 
-    session = db.create_scoped_session(dict(expire_on_commit=False))
+    session = db._make_scoped_session(dict(expire_on_commit=False))
     committed = session.query(DBModel).first()
 
     assert isinstance(committed.data, RestResponse.RestObject)
@@ -268,7 +268,7 @@ def test_orm_sqlalchemy(db, db_model, binary):
     db_model.data = []
     db.session.commit()
 
-    session = db.create_scoped_session(dict(expire_on_commit=False))
+    session = db._make_scoped_session(dict(expire_on_commit=False))
     committed = session.query(DBModel).first()
 
     assert isinstance(committed.data, RestResponse.RestList)
@@ -276,7 +276,7 @@ def test_orm_sqlalchemy(db, db_model, binary):
     db_model.data = None
     db.session.commit()
 
-    session = db.create_scoped_session(dict(expire_on_commit=False))
+    session = db._make_scoped_session(dict(expire_on_commit=False))
     committed = session.query(DBModel).first()
 
     assert isinstance(committed.data, RestResponse.RestObject)
