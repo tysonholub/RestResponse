@@ -5,6 +5,7 @@ from RestResponse import RestResponse, RestResponseObj, RestEncoder
 
 class RestResponseEncodedObj(types.TypeDecorator):
     impl = types.LargeBinary
+    cache_ok = True
 
     def process_bind_param(self, value, dialect):
         if value is not None:
